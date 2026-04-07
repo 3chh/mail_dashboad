@@ -1,0 +1,221 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  OPERATOR
+}
+
+enum MailProvider {
+  GMAIL
+  OUTLOOK
+}
+
+enum MailboxStatus {
+  DRAFT
+  PENDING_CONSENT
+  ACTIVE
+  ERROR
+  DISABLED
+  RECONNECT_REQUIRED
+}
+
+enum MailboxAuthType {
+  OAUTH
+}
+
+enum ScanJobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum ConfidenceLabel {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+model AdminUser {
+  id               String        @id @default(cuid())
+  email            String        @unique
+  passwordHash     String
+  name             String?
+  role             AdminRole     @default(OPERATOR)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  createdMailboxes Mailbox[]     @relation("MailboxCreatedBy")
+  scanJobs         ScanJob[]
+  extractionLogs   ExtractionLog[]
+}
+
+model Mailbox {
+  id                    String             @id @default(cuid())
+  emailAddress          String             @unique
+  displayName           String?
+  provider              MailProvider
+  authType              MailboxAuthType    @default(OAUTH)
+  status                MailboxStatus      @default(PENDING_CONSENT)
+  externalUserId        String?
+  accessTokenEncrypted  String?
+  refreshTokenEncrypted String?
+  tokenExpiresAt        DateTime?
+  grantedScopes         String?
+  consentedAt           DateTime?
+  lastSyncedAt          DateTime?
+  lastSyncCursor        String?
+  lastError             String?
+  notes                 String?
+  createdById           String?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  createdBy             AdminUser?         @relation("MailboxCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  messages              MailMessage[]
+  scanJobs              ScanJob[]
+  oauthStates           MailboxOAuthState[]
+  extractionLogs        ExtractionLog[]
+
+  @@index([provider, status])
+  @@index([status, lastSyncedAt(sort: Desc)])
+}
+
+model MailboxOAuthState {
+  id         String       @id @default(cuid())
+  mailboxId  String
+  provider   MailProvider
+  state      String       @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime     @default(now())
+  mailbox    Mailbox      @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+
+  @@index([mailboxId, provider])
+  @@index([expiresAt])
+}
+
+model ScanJob {
+  id                    String         @id @default(cuid())
+  adminUserId           String?
+  mailboxId             String
+  status                ScanJobStatus  @default(QUEUED)
+  jobName               String?
+  syncWindowDays        Int?
+  effectiveQuery        String?
+  totalMessagesFound    Int            @default(0)
+  scannedCount          Int            @default(0)
+  savedCount            Int            @default(0)
+  otpDetectionsFound    Int            @default(0)
+  orderExtractionsFound Int            @default(0)
+  errorMessage          String?
+  startedAt             DateTime?
+  completedAt           DateTime?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  adminUser             AdminUser?     @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
+  mailbox               Mailbox        @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+  messages              MailMessage[]  @relation("LastScanJobMessages")
+  logs                  ExtractionLog[]
+
+  @@index([mailboxId, createdAt(sort: Desc)])
+  @@index([status])
+}
+
+model MailMessage {
+  id               String            @id @default(cuid())
+  mailboxId        String
+  scanJobId        String?
+  remoteMessageId  String
+  remoteThreadId   String?
+  provider         MailProvider
+  fromName         String?
+  fromEmail        String?
+  fromHeader       String?
+  subject          String?
+  snippet          String?
+  receivedAt       DateTime?
+  plainTextBody    String?
+  htmlBody         String?
+  normalizedText   String?
+  labels           String?
+  hasAttachments   Boolean           @default(false)
+  sizeEstimate     Int?
+  rawHeadersJson   String?
+  rawPayloadJson   String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  mailbox          Mailbox           @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+  lastScanJob      ScanJob?          @relation("LastScanJobMessages", fields: [scanJobId], references: [id], onDelete: SetNull)
+  otpDetections    OtpDetection[]
+  orderExtractions OrderExtraction[]
+
+  @@unique([mailboxId, remoteMessageId])
+  @@index([mailboxId, receivedAt(sort: Desc)])
+  @@index([mailboxId, fromEmail])
+  @@index([provider, receivedAt(sort: Desc)])
+}
+
+model OtpDetection {
+  id                 String          @id @default(cuid())
+  messageId          String
+  code               String
+  confidenceScore    Float
+  confidenceLabel    ConfidenceLabel
+  matchedKeywordsJson String?
+  contextSnippet     String?
+  detectedAt         DateTime        @default(now())
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  message            MailMessage     @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, code])
+  @@index([detectedAt(sort: Desc)])
+}
+
+model OrderExtraction {
+  id              String          @id @default(cuid())
+  messageId       String          @unique
+  orderId         String?
+  orderDate       DateTime?
+  merchantName    String?
+  customerName    String?
+  totalAmount     Float?
+  currency        String?
+  orderStatus     String?
+  itemSummary     String?
+  sourceSubject   String?
+  sourceSender    String?
+  receivedAt      DateTime?
+  confidenceScore Float
+  confidenceLabel ConfidenceLabel
+  debugJson       String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  message         MailMessage     @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([receivedAt(sort: Desc)])
+  @@index([merchantName])
+}
+
+model ExtractionLog {
+  id          String    @id @default(cuid())
+  adminUserId String?
+  mailboxId   String?
+  scanJobId   String?
+  level       String
+  message     String
+  contextJson String?
+  createdAt   DateTime  @default(now())
+  adminUser   AdminUser? @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
+  mailbox     Mailbox?   @relation(fields: [mailboxId], references: [id], onDelete: SetNull)
+  scanJob     ScanJob?   @relation(fields: [scanJobId], references: [id], onDelete: Cascade)
+
+  @@index([scanJobId, createdAt(sort: Desc)])
+  @@index([mailboxId, createdAt(sort: Desc)])
+}

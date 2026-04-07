@@ -1,0 +1,17 @@
+[
+  {
+    "userId": "cmn7v1vuu0000b2ywj9rv4iml",
+    "type": "oauth",
+    "provider": "google",
+    "providerAccountId": "104592907665312922246",
+    "refresh_token": "1//0eC31flwlqHAzCgYIARAAGA4SNwF-L9IrPfugoP9zSS6wut3BRP0q0KIqvjne_IMKQBbSdFum_mKrydBGTnJ9SL6tTlFPMzmIkkI",
+    "access_token": "ya29.a0Aa7MYiraQlLEnmG1P37KJphLBXfLlvuzD08yCUD_GUXGU_du2oog7b1UzkBL4iD-t6DrIl4qwNYSwQWZOkAvi0Sc6RidOjQ3Xb0E4c8eEU1twgUYKVHQIDZIuwGw6JBFc6kuLSfngnCy7us_0XKWoghSsjIKk_R4M6X2KT80-PHaloxEOTSEdKO4zbBGGrSEkTKZXBUQaCgYKASoSARYSFQHGX2MixtHZ5kNU_C_MEt9JfSEbvA0207",
+    "expires_at": 1774585187,
+    "token_type": "Bearer",
+    "scope": "https://www.googleapis.com/auth/userinfo.email openid https://www.googleapis.com/auth/userinfo.profile",
+    "id_token": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImExMGU1OGRmNTVlNzI4NTY2ZWM1NmJkYTZlYjNiZDQ1NDM5ZjM1ZDciLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiI4MTY0MjE0MDcxNjAtcWFwcXRla2YwYjE4ODdjazJxY25nNGhuNjF0dDBoNjguYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJhdWQiOiI4MTY0MjE0MDcxNjAtcWFwcXRla2YwYjE4ODdjazJxY25nNGhuNjF0dDBoNjguYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJzdWIiOiIxMDQ1OTI5MDc2NjUzMTI5MjIyNDYiLCJlbWFpbCI6InR1bmdkbjIxN0BnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiYXRfaGFzaCI6IjZrZEJvY1NYWDN5X05CUVFkNkE1d0EiLCJuYW1lIjoiVMO5bmcgTMOqIFh1w6JuICgzY2hoKSIsInBpY3R1cmUiOiJodHRwczovL2xoMy5nb29nbGV1c2VyY29udGVudC5jb20vYS9BQ2c4b2NKU25EVm1jbjJPbDFEWUNfUnFrTkJjX1EzMWk1QmliOThSZ3Zoa2ktUGhfSExWUm12a1NBPXM5Ni1jIiwiZ2l2ZW5fbmFtZSI6IlTDuW5nIiwiZmFtaWx5X25hbWUiOiJMw6ogWHXDom4iLCJpYXQiOjE3NzQ1ODE1MTQsImV4cCI6MTc3NDU4NTExNH0.dypv6S5K6GBflXAjemPFmyJsoxZBwyTJ6hpla6aRSO6_fPFpQbTrsVU2tr5n5o0hXiR2B8ZwyFyMbOwo_dWet4mnZKgQbCdnW_M0W9zS17aGBGQ015O3Uq9pNEOr3FisKUA8YWDJr9ZL4BR4IY7MJqKoZsiMaPx-tjnXjcu2205lIyBdsF-zYlFtmqJjUs2jsLHAIbn5l7h9PXDy4K38l5dBt6JAkoqB3tsAmp6vKuyADqFvN4Eqr4Knp1jb-2RkrWgGwIdyz5UlWWjcqI_c5Hm3R3jI2BAS5gZyPfvFphE916E8ywyNU3k116IUqjeSCB5fltH00DYBQYS-x0yOpA",
+    "session_state": null,
+    "createdAt": "2026-03-26T19:23:43.123Z",
+    "updatedAt": "2026-03-27T03:19:48.943Z"
+  }
+]
