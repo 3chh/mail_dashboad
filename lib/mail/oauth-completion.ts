@@ -15,7 +15,7 @@ export function renderOAuthCompletionPage(args: {
   message: string;
   mailboxEmail?: string | null;
 }) {
-  const title = args.success ? "K?t n?i mailbox th?nh c?ng" : "K?t n?i mailbox th?t b?i";
+  const title = args.success ? "Kết nối mailbox thành công" : "Kết nối mailbox thất bại";
   const badge = args.provider === "gmail" ? "Gmail" : "Hotmail / Outlook";
   const html = `<!doctype html>
 <html lang="vi">
@@ -48,10 +48,10 @@ export function renderOAuthCompletionPage(args: {
         <div class="meta">
           <strong>Mailbox:</strong> ${escapeHtml(args.mailboxEmail ?? "N/A")}
         </div>
-        <p class="hint">Tab n?y c? th? ??ng ngay sau khi ho?n t?t. N?u b?n m? t? b?ng ?i?u khi?n, tr?ng th?i ? tab g?c s? t? l?m m?i.</p>
+        <p class="hint">Tab này có thể đóng ngay sau khi hoàn tất. Nếu bạn mở tab này từ bảng điều khiển, trạng thái ở tab gốc sẽ tự làm mới.</p>
         <div class="actions">
-          <button class="primary" type="button" onclick="closeWindow()">??ng tab n?y</button>
-          <button class="secondary" type="button" onclick="notifyAndStay()">L?m m?i tab g?c</button>
+          <button class="primary" type="button" onclick="closeWindow()">Đóng tab này</button>
+          <button class="secondary" type="button" onclick="notifyAndStay()">Làm mới tab gốc</button>
         </div>
       </div>
     </div>

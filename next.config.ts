@@ -1,7 +1,7 @@
 ﻿import type { NextConfig } from "next";
 
 function getAllowedDevOrigins() {
-  const origins = new Set<string>(["localhost", "localhost:3000", "127.0.0.1", "127.0.0.1:3000", "172.16.0.89"]);
+  const origins = new Set<string>(["localhost", "localhost:3000", "127.0.0.1", "127.0.0.1:3000", "172.16.0.89", "172.29.13.46", "172.29.13.46:3000"]);
   const candidates = [process.env.APP_PUBLIC_URL, process.env.NEXTAUTH_URL, process.env.APP_URL];
 
   for (const candidate of candidates) {
