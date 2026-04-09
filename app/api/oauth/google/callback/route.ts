@@ -1,8 +1,7 @@
-import { NextResponse } from "next/server";
 import { MailboxStatus } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { exchangeGoogleCode } from "@/lib/mail/adapters/gmail-api";
-import { buildPublicAppUrl } from "@/lib/mail/oauth-helpers";
+import { renderOAuthCompletionPage } from "@/lib/mail/oauth-completion";
 import { encryptSecret } from "@/lib/mail/token-vault";
 
 export async function GET(request: Request) {
@@ -12,11 +11,19 @@ export async function GET(request: Request) {
   const error = url.searchParams.get("error");
 
   if (error) {
-    return NextResponse.redirect(buildPublicAppUrl(`/dashboard?error=${encodeURIComponent(error)}`));
+    return renderOAuthCompletionPage({
+      success: false,
+      provider: "gmail",
+      message: `Google tr? v? l?i: ${error}`,
+    });
   }
 
   if (!state || !code) {
-    return NextResponse.redirect(buildPublicAppUrl("/dashboard?error=invalid-oauth-response"));
+    return renderOAuthCompletionPage({
+      success: false,
+      provider: "gmail",
+      message: "Ph?n h?i OAuth kh?ng h?p l? ho?c thi?u m? x?c th?c.",
+    });
   }
 
   const oauthState = await prisma.mailboxOAuthState.findUnique({
@@ -29,14 +36,19 @@ export async function GET(request: Request) {
   });
 
   if (!oauthState || oauthState.consumedAt || oauthState.expiresAt.getTime() < Date.now()) {
-    return NextResponse.redirect(buildPublicAppUrl("/dashboard?error=expired-state"));
+    return renderOAuthCompletionPage({
+      success: false,
+      provider: "gmail",
+      message: "Li?n k?t consent ?? h?t h?n ho?c ?? ???c d?ng tr??c ??.",
+      mailboxEmail: oauthState?.mailbox.emailAddress ?? null,
+    });
   }
 
   try {
     const token = await exchangeGoogleCode(code);
 
     if (!token.emailAddress || token.emailAddress !== oauthState.mailbox.emailAddress.toLowerCase()) {
-      throw new Error("Email tài khoản Google không khớp với mailbox.");
+      throw new Error("Email t?i kho?n Google kh?ng kh?p v?i mailbox.");
     }
 
     await prisma.$transaction([
@@ -66,7 +78,12 @@ export async function GET(request: Request) {
       }),
     ]);
 
-    return NextResponse.redirect(buildPublicAppUrl("/dashboard?connected=gmail"));
+    return renderOAuthCompletionPage({
+      success: true,
+      provider: "gmail",
+      message: "?? c?p quy?n ??c mail th?nh c?ng. Tr?ng th?i mailbox ?? ???c c?p nh?t sang k?t n?i th?nh c?ng.",
+      mailboxEmail: oauthState.mailbox.emailAddress,
+    });
   } catch (oauthError) {
     const message = oauthError instanceof Error ? oauthError.message : "Google mailbox connect failed.";
 
@@ -80,6 +97,11 @@ export async function GET(request: Request) {
       },
     });
 
-    return NextResponse.redirect(buildPublicAppUrl(`/dashboard?error=${encodeURIComponent(message)}`));
+    return renderOAuthCompletionPage({
+      success: false,
+      provider: "gmail",
+      message,
+      mailboxEmail: oauthState.mailbox.emailAddress,
+    });
   }
 }

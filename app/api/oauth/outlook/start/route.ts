@@ -1,11 +1,8 @@
-import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { MailProvider, MailboxStatus } from "@prisma/client";
 import { authOptions } from "@/lib/auth/auth-options";
 import { resolveAdminFromSessionUser } from "@/lib/auth/admin";
-import { prisma } from "@/lib/db/prisma";
-import { buildMicrosoftConsentUrl } from "@/lib/mail/adapters/microsoft-graph";
+import { createMailboxConsentUrl } from "@/lib/mail/consent-links";
 import { buildPublicAppUrl } from "@/lib/mail/oauth-helpers";
 
 export async function GET(request: Request) {
@@ -23,41 +20,15 @@ export async function GET(request: Request) {
     return NextResponse.redirect(buildPublicAppUrl("/dashboard?error=missing-mailbox"));
   }
 
-  const mailbox = await prisma.mailbox.findFirst({
-    where: {
-      id: mailboxId,
-      provider: MailProvider.OUTLOOK,
-      OR: [{ createdById: admin.id }, { createdById: null }],
-    },
-    select: {
-      id: true,
-    },
-  });
-
-  if (!mailbox) {
-    return NextResponse.redirect(buildPublicAppUrl("/dashboard?error=mailbox-not-found"));
-  }
-
-  const state = randomUUID();
-
-  await prisma.mailboxOAuthState.create({
-    data: {
+  try {
+    const consent = await createMailboxConsentUrl({
+      adminUserId: admin.id,
       mailboxId,
-      provider: MailProvider.OUTLOOK,
-      state,
-      expiresAt: new Date(Date.now() + 15 * 60 * 1000),
-    },
-  });
+    });
 
-  await prisma.mailbox.update({
-    where: {
-      id: mailboxId,
-    },
-    data: {
-      status: MailboxStatus.PENDING_CONSENT,
-      lastError: null,
-    },
-  });
-
-  return NextResponse.redirect(buildMicrosoftConsentUrl(state));
+    return NextResponse.redirect(consent.url);
+  } catch (error) {
+    const message = error instanceof Error && error.message === "MAILBOX_NOT_FOUND" ? "mailbox-not-found" : "consent-link-failed";
+    return NextResponse.redirect(buildPublicAppUrl(`/dashboard?error=${encodeURIComponent(message)}`));
+  }
 }

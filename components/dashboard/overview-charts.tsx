@@ -30,7 +30,7 @@ export function OverviewCharts({ emailsByDay, otpsByDay, ordersByDay }: Overview
 
   return (
     <div className="grid gap-4 xl:grid-cols-3">
-      <Card className="rounded-[28px] border-border/70 bg-white/75 xl:col-span-2">
+      <Card className="rounded-[28px] bg-card/88 xl:col-span-2">
         <CardHeader>
           <CardTitle>Lượng email theo ngày</CardTitle>
         </CardHeader>
@@ -47,7 +47,7 @@ export function OverviewCharts({ emailsByDay, otpsByDay, ordersByDay }: Overview
         </CardContent>
       </Card>
 
-      <Card className="rounded-[28px] border-border/70 bg-white/75">
+      <Card className="rounded-[28px] bg-card/88">
         <CardHeader>
           <CardTitle>Số OTP tìm được theo ngày</CardTitle>
         </CardHeader>
@@ -64,7 +64,7 @@ export function OverviewCharts({ emailsByDay, otpsByDay, ordersByDay }: Overview
         </CardContent>
       </Card>
 
-      <Card className="rounded-[28px] border-border/70 bg-white/75 xl:col-span-3">
+      <Card className="rounded-[28px] bg-card/88 xl:col-span-3">
         <CardHeader>
           <CardTitle>Email đơn hàng theo ngày</CardTitle>
         </CardHeader>

@@ -16,6 +16,7 @@ export const config = {
     "/otp/:path*",
     "/search/:path*",
     "/orders/:path*",
+    "/warehouses/:path*",
     "/scan-jobs/:path*",
     "/settings/:path*",
     "/messages/:path*",

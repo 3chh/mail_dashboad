@@ -2,7 +2,6 @@
 import { getRequiredAdmin } from "@/lib/auth/get-session";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getSettingsData } from "@/lib/queries/app-data";
-import { LogoutButton } from "@/components/settings/logout-button";
 
 export default async function SettingsPage() {
   const admin = await getRequiredAdmin();
@@ -10,7 +9,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-      <Card className="rounded-[28px] border-border/70 bg-white/75">
+      <Card className="rounded-[28px] bg-card/88">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <UserCog className="h-5 w-5 text-primary" />
@@ -21,11 +20,11 @@ export default async function SettingsPage() {
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="rounded-3xl border border-border/70 bg-background/80 p-5">
+          <div className="subpanel-surface rounded-3xl p-5">
             <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Email quản trị</p>
             <p className="mt-3 text-sm">{data.adminUser?.email ?? "không có"}</p>
           </div>
-          <div className="rounded-3xl border border-border/70 bg-background/80 p-5">
+          <div className="subpanel-surface rounded-3xl p-5">
             <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Vai trò</p>
             <p className="mt-3 text-sm">{data.adminUser?.role ?? "OPERATOR"}</p>
           </div>
@@ -34,7 +33,7 @@ export default async function SettingsPage() {
       </Card>
 
       <div className="space-y-4">
-        <Card className="rounded-[28px] border-border/70 bg-white/75">
+        <Card className="rounded-[28px] bg-card/88">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Database className="h-5 w-5 text-primary" />
@@ -42,26 +41,26 @@ export default async function SettingsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-muted-foreground">
-            <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-background/80 px-4 py-3">
+            <div className="subpanel-surface flex items-center justify-between rounded-2xl px-4 py-3">
               <span>Mailbox</span>
               <span className="font-medium text-foreground">{data.totals.mailboxes}</span>
             </div>
-            <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-background/80 px-4 py-3">
+            <div className="subpanel-surface flex items-center justify-between rounded-2xl px-4 py-3">
               <span>Email</span>
               <span className="font-medium text-foreground">{data.totals.messages}</span>
             </div>
-            <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-background/80 px-4 py-3">
+            <div className="subpanel-surface flex items-center justify-between rounded-2xl px-4 py-3">
               <span>OTP đã phát hiện</span>
               <span className="font-medium text-foreground">{data.totals.otps}</span>
             </div>
-            <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-background/80 px-4 py-3">
+            <div className="subpanel-surface flex items-center justify-between rounded-2xl px-4 py-3">
               <span>Đơn hàng đã phát hiện</span>
               <span className="font-medium text-foreground">{data.totals.orders}</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="rounded-[28px] border-border/70 bg-white/75">
+        <Card className="rounded-[28px] bg-card/88">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <ShieldCheck className="h-5 w-5 text-primary" />
@@ -78,4 +77,3 @@ export default async function SettingsPage() {
     </div>
   );
 }
-

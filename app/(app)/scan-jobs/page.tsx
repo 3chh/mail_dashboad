@@ -10,7 +10,7 @@ export default async function ScanJobsPage() {
 
   return (
     <div className="space-y-4">
-      <Card className="rounded-[28px] border-border/70 bg-white/75">
+      <Card className="rounded-[28px] bg-card/88">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ActivitySquare className="h-5 w-5 text-primary" />

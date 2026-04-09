@@ -75,7 +75,7 @@ export function JobsClient({ initialJobs }: { initialJobs: ScanJob[] }) {
         const progress = job.totalMessagesFound > 0 ? (job.scannedCount / job.totalMessagesFound) * 100 : 0;
 
         return (
-          <Card key={job.id} className="rounded-[28px] border-border/70 bg-white/75">
+          <Card key={job.id} className="rounded-[28px] bg-card/88">
             <CardContent className="space-y-4 p-6">
               <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
                 <div>
@@ -106,7 +106,7 @@ export function JobsClient({ initialJobs }: { initialJobs: ScanJob[] }) {
               </div>
 
               {job.errorMessage ? (
-                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                <div className="semantic-danger rounded-2xl border px-4 py-3 text-sm">
                   {job.errorMessage}
                 </div>
               ) : null}
@@ -114,7 +114,7 @@ export function JobsClient({ initialJobs }: { initialJobs: ScanJob[] }) {
               <div className="grid gap-4 xl:grid-cols-[1fr_auto]">
                 <div className="space-y-2">
                   {job.logs.map((log) => (
-                    <div key={log.id} className="rounded-2xl border border-border/60 bg-background/70 px-4 py-3">
+                    <div key={log.id} className="subpanel-surface rounded-2xl px-4 py-3">
                       <p className="text-sm font-medium">{log.message}</p>
                       <p className="mt-1 text-xs text-muted-foreground">{formatDateTime(log.createdAt)}</p>
                     </div>
@@ -122,7 +122,7 @@ export function JobsClient({ initialJobs }: { initialJobs: ScanJob[] }) {
                 </div>
 
                 <div className="flex items-start">
-                  <Link href="/dashboard" className="rounded-2xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted">
+                  <Link href="/dashboard" className="control-surface rounded-2xl px-4 py-2 text-sm font-medium text-foreground transition">
                     Mở bảng điều khiển
                   </Link>
                 </div>

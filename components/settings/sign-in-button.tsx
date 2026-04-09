@@ -27,13 +27,13 @@ export function AdminSignInForm() {
       });
 
       if (!result || result.error || !result.ok) {
-        const message = "ÄÄng nháº­p tháº¥t báº¡i. HÃ£y kiá»m tra láº¡i tÃ i khoáº£n quáº£n trá».";
+        const message = "Đăng nhập thất bại. Hãy kiểm tra lại tài khoản quản trị.";
         setErrorMessage(message);
         toast.error(message);
         return;
       }
 
-      toast.success("ÄÄng nháº­p thÃ nh cÃ´ng.");
+      toast.success("Đăng nhập thành công.");
       window.location.assign("/dashboard");
     });
   }
@@ -77,7 +77,7 @@ export function AdminSignInForm() {
       </div>
 
       {errorMessage ? (
-        <div className="flex items-start gap-2 rounded-2xl border border-rose-300/40 bg-rose-300/10 px-3 py-2 text-sm text-rose-50">
+        <div className="semantic-danger flex items-start gap-2 rounded-2xl border px-3 py-2 text-sm">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>{errorMessage}</span>
         </div>
@@ -92,7 +92,7 @@ export function AdminSignInForm() {
         <Button
           type="button"
           variant="outline"
-          className="h-11 w-full rounded-2xl border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+          className="h-11 w-full rounded-2xl text-white/90 hover:text-white"
           onClick={() => signOut({ callbackUrl: "/sign-in" })}
         >
           <LogOut className="mr-2 h-4 w-4" />

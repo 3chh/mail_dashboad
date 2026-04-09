@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { MailboxStatus } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ProviderBadge } from "@/components/shared/provider-badge";
-import { MailboxStatusBadge } from "@/components/shared/mailbox-status-badge";
 import { formatDateTime } from "@/lib/utils";
 
 type MailboxRow = {
@@ -15,9 +14,11 @@ type MailboxRow = {
   emailAddress: string;
   displayName: string | null;
   provider: "GMAIL" | "OUTLOOK";
-  status: string;
   lastSyncedAt: string | Date | null;
-  lastError: string | null;
+  group?: {
+    id: string;
+    name: string;
+  } | null;
 };
 
 type DragMode = "select" | "deselect";
@@ -38,7 +39,7 @@ export function MailboxSelectionTable({
   const [dragMode, setDragMode] = useState<DragMode | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [providerFilter, setProviderFilter] = useState<"ALL" | "GMAIL" | "OUTLOOK">("ALL");
-  const [statusFilter, setStatusFilter] = useState<"ALL" | MailboxStatus>("ALL");
+  const [groupFilter, setGroupFilter] = useState<string>("ALL");
 
   useEffect(() => {
     setSelectedIds(selectedMailboxIds);
@@ -53,6 +54,36 @@ export function MailboxSelectionTable({
     return () => window.removeEventListener("mouseup", handleMouseUp);
   }, []);
 
+  const availableGroups = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const mailbox of mailboxes) {
+      if (mailbox.group?.id && mailbox.group?.name) {
+        map.set(mailbox.group.id, mailbox.group.name);
+      }
+    }
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [mailboxes]);
+
+  function getProviderFilterLabel(value: string | null) {
+    switch (value) {
+      case "GMAIL":
+        return "Gmail";
+      case "OUTLOOK":
+        return "Hotmail / Outlook";
+      case "ALL":
+      default:
+        return "T?t c? nh? cung c?p";
+    }
+  }
+
+  function getGroupFilterLabel(value: string | null) {
+    if (!value || value === "ALL") {
+      return "T?t c? nh?m";
+    }
+
+    return availableGroups.find((group) => group.id === value)?.name ?? value;
+  }
+
   const filteredMailboxes = useMemo(() => {
     const normalizedSearch = normalizeMailboxSearch(searchTerm);
 
@@ -62,11 +93,11 @@ export function MailboxSelectionTable({
         mailbox.emailAddress.toLowerCase().includes(normalizedSearch) ||
         (mailbox.displayName ?? "").toLowerCase().includes(normalizedSearch);
       const matchesProvider = providerFilter === "ALL" || mailbox.provider === providerFilter;
-      const matchesStatus = statusFilter === "ALL" || mailbox.status === statusFilter;
+      const matchesGroup = groupFilter === "ALL" || mailbox.group?.id === groupFilter;
 
-      return matchesSearch && matchesProvider && matchesStatus;
+      return matchesSearch && matchesProvider && matchesGroup;
     });
-  }, [mailboxes, providerFilter, searchTerm, statusFilter]);
+  }, [groupFilter, mailboxes, providerFilter, searchTerm]);
 
   function setMailboxSelection(mailboxId: string, shouldSelect: boolean) {
     setSelectedIds((current) => {
@@ -154,63 +185,61 @@ export function MailboxSelectionTable({
         <input key={mailboxId} type="hidden" name="mailboxId" value={mailboxId} />
       ))}
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1.3fr_0.8fr_0.8fr_auto]">
+      <div className="grid items-center gap-3 md:grid-cols-2 xl:grid-cols-[1.2fr_0.82fr_0.82fr_auto_auto]">
         <Input
           value={searchTerm}
           onChange={(event) => setSearchTerm(event.target.value)}
-          placeholder="Tìm theo email hoặc tên hiển thị"
-          className="h-11 rounded-2xl"
+          placeholder="T?m theo email ho?c t?n hi?n th?"
+          className="h-10 rounded-xl"
         />
-        <select
-          value={providerFilter}
-          onChange={(event) => setProviderFilter(event.target.value as "ALL" | "GMAIL" | "OUTLOOK")}
-          className="h-11 rounded-2xl border border-input bg-background px-3 text-sm"
-        >
-          <option value="ALL">Tất cả nhà cung cấp</option>
-          <option value="GMAIL">Gmail</option>
-          <option value="OUTLOOK">Hotmail / Outlook</option>
-        </select>
-        <select
-          value={statusFilter}
-          onChange={(event) => setStatusFilter(event.target.value as "ALL" | MailboxStatus)}
-          className="h-11 rounded-2xl border border-input bg-background px-3 text-sm"
-        >
-          <option value="ALL">Tất cả trạng thái</option>
-          <option value="ACTIVE">Đang hoạt động</option>
-          <option value="PENDING_CONSENT">Chờ consent</option>
-          <option value="RECONNECT_REQUIRED">Cần kết nối lại</option>
-          <option value="ERROR">Lỗi</option>
-          <option value="DISABLED">Đã tắt</option>
-          <option value="DRAFT">Nháp</option>
-        </select>
-        <div className="flex items-center justify-end rounded-2xl border border-border/60 bg-background px-4 text-sm text-muted-foreground">
-          {selectedIds.length} đã chọn / {filteredMailboxes.length} đang hiển thị
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" variant="outline" className="rounded-2xl" onClick={selectAllVisible}>
-          Chọn tất cả đang hiển thị
+        <Select value={providerFilter} onValueChange={(value) => setProviderFilter(value as "ALL" | "GMAIL" | "OUTLOOK")}>
+          <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm">
+            <SelectValue>{(value) => getProviderFilterLabel(value as string | null)}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">T?t c? nh? cung c?p</SelectItem>
+            <SelectItem value="GMAIL">Gmail</SelectItem>
+            <SelectItem value="OUTLOOK">Hotmail / Outlook</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={groupFilter} onValueChange={setGroupFilter}>
+          <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm">
+            <SelectValue>{(value) => getGroupFilterLabel(value as string | null)}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">T?t c? nh?m</SelectItem>
+            {availableGroups.map((group) => (
+              <SelectItem key={group.id} value={group.id}>
+                {group.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button type="button" variant="outline" className="h-10 rounded-xl px-3 whitespace-nowrap" onClick={selectAllVisible}>
+          Ch?n t?t c? ?ang hi?n th?
         </Button>
-        <Button type="button" variant="outline" className="rounded-2xl" onClick={clearSelection}>
-          Bỏ chọn
+        <Button type="button" variant="outline" className="h-10 rounded-xl px-3 whitespace-nowrap" onClick={clearSelection}>
+          B? ch?n
         </Button>
       </div>
 
-      <div className="rounded-[24px] border border-border/70 bg-background/70">
-        <ScrollArea className="h-[380px] rounded-[24px]">
-          <div className="min-w-[980px] select-none">
+      <div className="text-sm text-muted-foreground">
+        {selectedIds.length} / {filteredMailboxes.length} Ä‘Ã£ chá»n
+      </div>
+
+      <div className="subpanel-surface rounded-[24px]">
+        <ScrollArea className="h-[360px] rounded-[24px]">
+          <div className="min-w-[960px] select-none">
             <Table>
-              <TableHeader className="sticky top-0 z-10 bg-background/95 backdrop-blur [&_tr]:border-b [&_th]:bg-background/95">
+              <TableHeader className="sticky top-0 z-10 bg-background/90 backdrop-blur-xl [&_tr]:border-b [&_th]:bg-background/90">
                 <TableRow>
                   <TableHead className="w-14 text-center">STT</TableHead>
-                  <TableHead className="w-16 text-center">Chọn</TableHead>
+                  <TableHead className="w-16 text-center">Ch?n</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Tên hiển thị</TableHead>
-                  <TableHead>Nhà cung cấp</TableHead>
-                  <TableHead>Trạng thái</TableHead>
-                  <TableHead>Lần đồng bộ cuối</TableHead>
-                  <TableHead>Lỗi gần nhất</TableHead>
+                  <TableHead>T?n hi?n th?</TableHead>
+                  <TableHead>Nh?m</TableHead>
+                  <TableHead>Nh? cung c?p</TableHead>
+                  <TableHead>L?n ??ng b? cu?i</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -221,7 +250,7 @@ export function MailboxSelectionTable({
                     <TableRow
                       key={mailbox.id}
                       data-state={selected ? "selected" : undefined}
-                      className={`cursor-default ${selected ? "bg-primary/5" : ""}`}
+                      className={selected ? "surface-selected" : ""}
                       onMouseDown={(event) => {
                         event.preventDefault();
                         handleRowMouseDown(mailbox.id, index, event.shiftKey);
@@ -236,16 +265,11 @@ export function MailboxSelectionTable({
                         <div className="font-medium">{mailbox.emailAddress}</div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{mailbox.displayName || "-"}</TableCell>
+                      <TableCell>{mailbox.group?.name ?? "All"}</TableCell>
                       <TableCell>
                         <ProviderBadge provider={mailbox.provider} />
                       </TableCell>
-                      <TableCell>
-                        <MailboxStatusBadge value={mailbox.status as MailboxStatus} />
-                      </TableCell>
                       <TableCell className="text-muted-foreground">{formatDateTime(mailbox.lastSyncedAt)}</TableCell>
-                      <TableCell>
-                        <div className="max-w-[240px] truncate text-sm text-rose-700">{mailbox.lastError || "-"}</div>
-                      </TableCell>
                     </TableRow>
                   );
                 })}

@@ -8,6 +8,7 @@ const items = [
   { href: "/dashboard", label: "B?ng ?i?u khi?n" },
   { href: "/otp", label: "L?y OTP" },
   { href: "/search", label: "T?m ki?m" },
+  { href: "/warehouses", label: "Kho" },
   { href: "/scan-jobs", label: "??ng b?" },
   { href: "/settings", label: "C?i ??t" },
 ];
@@ -28,8 +29,8 @@ export function MobileNav() {
               className={cn(
                 "rounded-full border px-4 py-2 text-sm font-medium transition",
                 active
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-white/70 text-muted-foreground",
+                  ? "border-[color:var(--primary-border)] bg-[color:var(--primary-soft)] text-foreground shadow-[0_18px_36px_-28px_rgba(44,143,153,0.45)]"
+                  : "border-border/70 bg-card/75 text-muted-foreground hover:bg-accent/80 hover:text-foreground",
               )}
             >
               {item.label}

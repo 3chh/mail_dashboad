@@ -10,21 +10,66 @@ const createMailboxSchema = z.object({
   emailAddress: z.string().email(),
   provider: z.nativeEnum(MailProvider),
   displayName: z.string().trim().max(120).optional().or(z.literal("")),
+  groupId: z.string().trim().optional().or(z.literal("")),
+  newGroupName: z.string().trim().max(80).optional().or(z.literal("")),
 });
+
+async function resolveMailboxGroup(adminUserId: string, args: { groupId?: string; newGroupName?: string }) {
+  const newGroupName = args.newGroupName?.trim();
+  if (newGroupName) {
+    const group = await prisma.mailboxGroup.upsert({
+      where: {
+        name: newGroupName,
+      },
+      update: {},
+      create: {
+        name: newGroupName,
+        createdById: adminUserId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    return group.id;
+  }
+
+  const groupId = args.groupId?.trim();
+  if (!groupId) {
+    return null;
+  }
+
+  const group = await prisma.mailboxGroup.findFirst({
+    where: {
+      id: groupId,
+      OR: [{ createdById: adminUserId }, { createdById: null }],
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  return group?.id ?? null;
+}
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
   const admin = await resolveAdminFromSessionUser(session?.user);
 
   if (!admin) {
-    return NextResponse.json({ error: "Không có quyền truy cập." }, { status: 401 });
+    return NextResponse.json({ error: "Kh?ng c? quy?n truy c?p." }, { status: 401 });
   }
 
   const parsed = createMailboxSchema.safeParse(await request.json());
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "Payload mailbox không hợp lệ." }, { status: 400 });
+    return NextResponse.json({ error: "Payload mailbox kh?ng h?p l?." }, { status: 400 });
   }
+
+  const groupId = await resolveMailboxGroup(admin.id, {
+    groupId: parsed.data.groupId || undefined,
+    newGroupName: parsed.data.newGroupName || undefined,
+  });
 
   const mailbox = await prisma.mailbox.upsert({
     where: {
@@ -33,6 +78,7 @@ export async function POST(request: Request) {
     update: {
       provider: parsed.data.provider,
       displayName: parsed.data.displayName?.trim() || null,
+      groupId,
       status: MailboxStatus.PENDING_CONSENT,
       createdById: admin.id,
       lastError: null,
@@ -42,8 +88,17 @@ export async function POST(request: Request) {
       displayName: parsed.data.displayName?.trim() || null,
       provider: parsed.data.provider,
       authType: MailboxAuthType.OAUTH,
+      groupId,
       status: MailboxStatus.PENDING_CONSENT,
       createdById: admin.id,
+    },
+    include: {
+      group: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
     },
   });
 

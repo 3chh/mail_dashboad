@@ -30,128 +30,160 @@ export async function getDashboardData(adminUserId: string) {
   const mailboxWhere = {
     OR: [{ createdById: adminUserId }, { createdById: null }],
   };
+  const sharedVisibilityWhere = {
+    OR: [{ createdById: adminUserId }, { createdById: null }],
+  };
 
-  const [mailboxes, totalMessages, syncedToday, otpsFound, ordersFound, recentJobs, recentOtps, recentOrders, messagesByDay, otpsByDay, ordersByDay] =
-    await Promise.all([
-      prisma.mailbox.findMany({
-        where: mailboxWhere,
-        orderBy: [{ status: "asc" }, { emailAddress: "asc" }],
-        include: {
-          _count: {
-            select: {
-              messages: true,
-              scanJobs: true,
-            },
+  const [
+    mailboxes,
+    mailboxGroups,
+    totalMessages,
+    syncedToday,
+    otpsFound,
+    ordersFound,
+    recentJobs,
+    recentOtps,
+    recentOrders,
+    messagesByDay,
+    otpsByDay,
+    ordersByDay,
+  ] = await Promise.all([
+    prisma.mailbox.findMany({
+      where: mailboxWhere,
+      orderBy: [{ status: "asc" }, { emailAddress: "asc" }],
+      include: {
+        group: {
+          select: {
+            id: true,
+            name: true,
           },
         },
-      }),
-      prisma.mailMessage.count({
-        where: {
+        _count: {
+          select: {
+            messages: true,
+            scanJobs: true,
+          },
+        },
+      },
+    }),
+    prisma.mailboxGroup.findMany({
+      where: sharedVisibilityWhere,
+      orderBy: [{ name: "asc" }],
+      include: {
+        _count: {
+          select: {
+            mailboxes: true,
+          },
+        },
+      },
+    }),
+    prisma.mailMessage.count({
+      where: {
+        mailbox: mailboxWhere,
+      },
+    }),
+    prisma.mailMessage.count({
+      where: {
+        mailbox: mailboxWhere,
+        createdAt: {
+          gte: todayStart,
+        },
+      },
+    }),
+    prisma.otpDetection.count({
+      where: {
+        message: {
           mailbox: mailboxWhere,
         },
-      }),
-      prisma.mailMessage.count({
-        where: {
-          mailbox: mailboxWhere,
-          createdAt: {
-            gte: todayStart,
-          },
-        },
-      }),
-      prisma.otpDetection.count({
-        where: {
-          message: {
-            mailbox: mailboxWhere,
-          },
-        },
-      }),
-      prisma.orderExtraction.count({
-        where: {
-          message: {
-            mailbox: mailboxWhere,
-          },
-        },
-      }),
-      prisma.scanJob.findMany({
-        where: {
+      },
+    }),
+    prisma.orderExtraction.count({
+      where: {
+        message: {
           mailbox: mailboxWhere,
         },
-        include: {
-          mailbox: true,
-        },
-        orderBy: { createdAt: "desc" },
-        take: 6,
-      }),
-      prisma.otpDetection.findMany({
-        where: {
-          message: {
-            mailbox: mailboxWhere,
-          },
-        },
-        include: {
-          message: {
-            include: {
-              mailbox: true,
-            },
-          },
-        },
-        orderBy: { detectedAt: "desc" },
-        take: 6,
-      }),
-      prisma.orderExtraction.findMany({
-        where: {
-          message: {
-            mailbox: mailboxWhere,
-          },
-        },
-        include: {
-          message: {
-            include: {
-              mailbox: true,
-            },
-          },
-        },
-        orderBy: { receivedAt: "desc" },
-        take: 6,
-      }),
-      prisma.mailMessage.findMany({
-        where: {
+      },
+    }),
+    prisma.scanJob.findMany({
+      where: {
+        mailbox: mailboxWhere,
+      },
+      include: {
+        mailbox: true,
+      },
+      orderBy: { createdAt: "desc" },
+      take: 6,
+    }),
+    prisma.otpDetection.findMany({
+      where: {
+        message: {
           mailbox: mailboxWhere,
-          receivedAt: {
-            gte: since14Days,
+        },
+      },
+      include: {
+        message: {
+          include: {
+            mailbox: true,
           },
         },
-        select: {
-          receivedAt: true,
+      },
+      orderBy: { detectedAt: "desc" },
+      take: 6,
+    }),
+    prisma.orderExtraction.findMany({
+      where: {
+        message: {
+          mailbox: mailboxWhere,
         },
-      }),
-      prisma.otpDetection.findMany({
-        where: {
-          message: {
-            mailbox: mailboxWhere,
-          },
-          detectedAt: {
-            gte: since14Days,
-          },
-        },
-        select: {
-          detectedAt: true,
-        },
-      }),
-      prisma.orderExtraction.findMany({
-        where: {
-          message: {
-            mailbox: mailboxWhere,
-          },
-          receivedAt: {
-            gte: since14Days,
+      },
+      include: {
+        message: {
+          include: {
+            mailbox: true,
           },
         },
-        select: {
-          receivedAt: true,
+      },
+      orderBy: { receivedAt: "desc" },
+      take: 6,
+    }),
+    prisma.mailMessage.findMany({
+      where: {
+        mailbox: mailboxWhere,
+        receivedAt: {
+          gte: since14Days,
         },
-      }),
-    ]);
+      },
+      select: {
+        receivedAt: true,
+      },
+    }),
+    prisma.otpDetection.findMany({
+      where: {
+        message: {
+          mailbox: mailboxWhere,
+        },
+        detectedAt: {
+          gte: since14Days,
+        },
+      },
+      select: {
+        detectedAt: true,
+      },
+    }),
+    prisma.orderExtraction.findMany({
+      where: {
+        message: {
+          mailbox: mailboxWhere,
+        },
+        receivedAt: {
+          gte: since14Days,
+        },
+      },
+      select: {
+        receivedAt: true,
+      },
+    }),
+  ]);
 
   const activeMailboxCount = mailboxes.filter((mailbox) => mailbox.status === MailboxStatus.ACTIVE).length;
   const reconnectRequiredCount = mailboxes.filter((mailbox) => mailbox.status === MailboxStatus.RECONNECT_REQUIRED).length;
@@ -168,6 +200,11 @@ export async function getDashboardData(adminUserId: string) {
       otpsFound,
       ordersFound,
     },
+    groups: mailboxGroups.map((group) => ({
+      id: group.id,
+      name: group.name,
+      mailboxCount: group._count.mailboxes,
+    })),
     charts: {
       emailsByDay: fillDailySeries(
         Object.entries(
@@ -211,6 +248,7 @@ export async function getDashboardData(adminUserId: string) {
       displayName: mailbox.displayName,
       provider: mailbox.provider,
       status: mailbox.status,
+      group: mailbox.group,
       lastSyncedAt: mailbox.lastSyncedAt,
       lastError: mailbox.lastError,
       messageCount: mailbox._count.messages,

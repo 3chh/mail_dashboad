@@ -21,3 +21,4 @@ export function CopyOtpButton({ code }: { code: string }) {
     </Button>
   );
 }
+

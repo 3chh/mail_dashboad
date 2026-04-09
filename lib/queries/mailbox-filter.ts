@@ -24,9 +24,7 @@ export async function resolveMailboxSelection(adminUserId: string, requestedIds:
       },
       OR: [{ createdById: adminUserId }, { createdById: null }],
     },
-    orderBy: {
-      emailAddress: "asc",
-    },
+    orderBy: [{ emailAddress: "asc" }],
     select: {
       id: true,
       emailAddress: true,
@@ -35,6 +33,12 @@ export async function resolveMailboxSelection(adminUserId: string, requestedIds:
       status: true,
       lastSyncedAt: true,
       lastError: true,
+      group: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
     },
   });
 

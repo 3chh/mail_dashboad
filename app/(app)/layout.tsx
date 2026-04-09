@@ -14,10 +14,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         <SidebarNav />
 
         <div className="flex min-w-0 flex-1 flex-col gap-4">
-          <header className="flex flex-col gap-4 rounded-[28px] border border-border/70 bg-white/72 px-5 py-4 shadow-[0_20px_60px_-40px_rgba(10,34,31,0.3)] backdrop-blur xl:flex-row xl:items-center xl:justify-between">
+          <header className="panel-surface flex flex-col gap-4 rounded-[28px] px-5 py-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Vận hành mailbox tập trung</p>
-              <h2 className="mt-2 text-2xl font-semibold">Bảng điều khiển Gmail và Hotmail</h2>
+              <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">V?n h?nh mailbox t?p trung</p>
+              <h2 className="mt-2 text-2xl font-semibold">B?ng ?i?u khi?n Gmail v? Hotmail</h2>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">

@@ -43,7 +43,9 @@ export async function GET(request: Request) {
     withAttachments: searchParams.get("withAttachments") === "true",
     lookbackDays: parseLookbackDays(searchParams.get("lookbackDays"), 30),
     mode,
-  });
+  },
+    admin.id,
+  );
 
   const header =
     mode === "order"

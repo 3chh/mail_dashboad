@@ -7,6 +7,8 @@ import {
   formatSearchExportDate,
   messageMatchesRequiredKeywords,
   parseSearchMode,
+  resolveWarehouseMatch,
+  type WarehouseLookupRow,
 } from "@/lib/mail/query";
 import { buildMessageWhereClause } from "@/lib/queries/mailbox-filter";
 
@@ -48,6 +50,10 @@ export type MailToolSearchResult = {
     status: string;
     lastSyncedAt: Date | null;
     lastError: string | null;
+    group?: {
+      id: string;
+      name: string;
+    } | null;
   };
 };
 
@@ -70,6 +76,7 @@ export async function getOtpMonitorData(mailboxIds: string[], filters: FilterInp
 
   const effectiveDateFrom = filters.quick === "today" ? todayFrom.toISOString().slice(0, 10) : filters.dateFrom;
   const effectiveUnreadOnly = filters.unreadOnly || filters.quick === "unread";
+  const effectiveLookbackDays = effectiveDateFrom ? undefined : filters.lookbackDays;
 
   const mailboxes = await prisma.mailbox.findMany({
     where: {
@@ -99,6 +106,7 @@ export async function getOtpMonitorData(mailboxIds: string[], filters: FilterInp
           dateFrom: effectiveDateFrom,
           dateTo: filters.dateTo,
           unreadOnly: effectiveUnreadOnly,
+          lookbackDays: effectiveLookbackDays,
         }),
         include: {
           mailbox: true,
@@ -164,49 +172,76 @@ export async function getOrdersData(mailboxIds: string[], filters: FilterInput &
   });
 }
 
-export async function searchMailToolResults(mailboxIds: string[], filters: SearchMailFilters) {
-  const mode = parseSearchMode(filters.mode);
+async function loadWarehousesForSearch(adminUserId?: string): Promise<WarehouseLookupRow[]> {
+  const warehouses = await prisma.warehouse.findMany({
+    where: adminUserId
+      ? {
+          OR: [{ createdById: adminUserId }, { createdById: null }],
+        }
+      : undefined,
+    orderBy: [{ name: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      address: true,
+      normalizedAddress: true,
+    },
+  });
 
-  const messages = await prisma.$transaction(
-    mailboxIds.map((mailboxId) =>
-      prisma.mailMessage.findFirst({
-        where: buildMessageWhereClause({
-          mailboxIds: [mailboxId],
-          keyword: filters.keyword,
-          sender: filters.sender,
-          dateFrom: filters.dateFrom,
-          dateTo: filters.dateTo,
-          unreadOnly: filters.unreadOnly,
-          withAttachments: filters.withAttachments,
-          lookbackDays: filters.lookbackDays,
-        }),
-        select: {
-          id: true,
-          fromEmail: true,
-          fromHeader: true,
-          subject: true,
-          snippet: true,
-          receivedAt: true,
-          plainTextBody: true,
-          normalizedText: true,
-          hasAttachments: true,
-          labels: true,
-          mailbox: {
-            select: {
-              id: true,
-              emailAddress: true,
-              displayName: true,
-              provider: true,
-              status: true,
-              lastSyncedAt: true,
-              lastError: true,
+  return warehouses;
+}
+
+export async function searchMailToolResults(mailboxIds: string[], filters: SearchMailFilters, adminUserId?: string) {
+  const mode = parseSearchMode(filters.mode);
+  const [messages, warehouses] = await Promise.all([
+    prisma.$transaction(
+      mailboxIds.map((mailboxId) =>
+        prisma.mailMessage.findFirst({
+          where: buildMessageWhereClause({
+            mailboxIds: [mailboxId],
+            keyword: filters.keyword,
+            sender: filters.sender,
+            dateFrom: filters.dateFrom,
+            dateTo: filters.dateTo,
+            unreadOnly: filters.unreadOnly,
+            withAttachments: filters.withAttachments,
+            lookbackDays: filters.lookbackDays,
+          }),
+          select: {
+            id: true,
+            fromEmail: true,
+            fromHeader: true,
+            subject: true,
+            snippet: true,
+            receivedAt: true,
+            plainTextBody: true,
+            normalizedText: true,
+            hasAttachments: true,
+            labels: true,
+            mailbox: {
+              select: {
+                id: true,
+                emailAddress: true,
+                displayName: true,
+                provider: true,
+                status: true,
+                lastSyncedAt: true,
+                lastError: true,
+                group: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
             },
           },
-        },
-        orderBy: [{ receivedAt: "desc" }, { createdAt: "desc" }],
-      }),
+          orderBy: [{ receivedAt: "desc" }, { createdAt: "desc" }],
+        }),
+      ),
     ),
-  );
+    mode === "order" ? loadWarehousesForSearch(adminUserId) : Promise.resolve([]),
+  ]);
 
   return messages
     .filter((message): message is NonNullable<(typeof messages)[number]> => Boolean(message))
@@ -218,6 +253,15 @@ export async function searchMailToolResults(mailboxIds: string[], filters: Searc
     )
     .map((message) => {
       const body = (message.plainTextBody || message.normalizedText || message.snippet || "").trim();
+      const warehouseMatch =
+        mode === "order"
+          ? resolveWarehouseMatch(body, warehouses)
+          : {
+              address: extractAddressLine(body),
+              warehouse: "N/A",
+              score: 0,
+            };
+
       const result: MailToolSearchResult = {
         id: `${message.mailbox.id}-${message.id}`,
         messageId: message.id,
@@ -229,8 +273,8 @@ export async function searchMailToolResults(mailboxIds: string[], filters: Searc
         body,
         snippet: (message.snippet || body).trim(),
         tracking: mode === "order" ? extractTrackingNumber(body) : "N/A",
-        address: mode === "order" ? extractAddressLine(body) : "N/A",
-        warehouse: mode === "order" ? "N/A" : "N/A",
+        address: mode === "order" ? warehouseMatch.address : "N/A",
+        warehouse: mode === "order" ? warehouseMatch.warehouse : "N/A",
         hasAttachments: message.hasAttachments,
         labels: message.labels,
         receivedAt: message.receivedAt,

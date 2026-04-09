@@ -4,6 +4,7 @@ import { getRequiredAdmin } from "@/lib/auth/get-session";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MailboxSelectionTable } from "@/components/shared/mailbox-selection-table";
 import { buildLocalSearchSummary, parseLookbackDays, parseSearchMode } from "@/lib/mail/query";
 import { searchMailToolResults } from "@/lib/queries/app-data";
@@ -28,19 +29,26 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const mode = parseSearchMode(typeof params.mode === "string" ? params.mode : undefined);
 
   const selection = await resolveMailboxSelection(admin.id, parseMultiValueParam(params.mailboxId));
+  const activeMailboxes = selection.mailboxes.filter((mailbox) => mailbox.status === "ACTIVE");
+  const activeMailboxIds = new Set(activeMailboxes.map((mailbox) => mailbox.id));
+  const selectedMailboxIds = selection.selectedMailboxIds.filter((mailboxId) => activeMailboxIds.has(mailboxId));
 
   const results =
-    selection.selectedMailboxIds.length > 0
-      ? await searchMailToolResults(selection.selectedMailboxIds, {
-          keyword: keyword || undefined,
-          sender: sender || undefined,
-          dateFrom: dateFrom || undefined,
-          dateTo: dateTo || undefined,
-          unreadOnly,
-          withAttachments,
-          lookbackDays,
-          mode,
-        })
+    selectedMailboxIds.length > 0
+      ? await searchMailToolResults(
+          selectedMailboxIds,
+          {
+            keyword: keyword || undefined,
+            sender: sender || undefined,
+            dateFrom: dateFrom || undefined,
+            dateTo: dateTo || undefined,
+            unreadOnly,
+            withAttachments,
+            lookbackDays,
+            mode,
+          },
+          admin.id,
+        )
       : [];
 
   const effectiveSummary = buildLocalSearchSummary({
@@ -63,62 +71,98 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   if (dateTo) exportParams.set("dateTo", dateTo);
   if (unreadOnly) exportParams.set("unreadOnly", "true");
   if (withAttachments) exportParams.set("withAttachments", "true");
-  for (const mailboxId of selection.selectedMailboxIds) {
+  for (const mailboxId of selectedMailboxIds) {
     exportParams.append("mailboxId", mailboxId);
   }
 
   return (
     <div className="space-y-4">
-      <Card className="rounded-[28px] border-border/70 bg-white/75">
+      <Card className="rounded-[28px] bg-card/88">
         <CardHeader>
           <CardTitle>Tìm kiếm mail / Đơn hàng</CardTitle>
         </CardHeader>
         <CardContent>
           <form className="grid gap-3">
             <MailboxSelectionTable
-              mailboxes={selection.mailboxes.map((mailbox) => ({
+              mailboxes={activeMailboxes.map((mailbox) => ({
                 ...mailbox,
                 lastSyncedAt: mailbox.lastSyncedAt?.toISOString() ?? null,
               }))}
-              selectedMailboxIds={selection.selectedMailboxIds}
+              selectedMailboxIds={selectedMailboxIds}
             />
 
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-              <Input name="keyword" defaultValue={keyword} placeholder='Từ khóa theo dạng "otp / amazon"' className="h-11 rounded-2xl" />
-              <Input name="sender" defaultValue={sender} placeholder="Người gửi" className="h-11 rounded-2xl" />
-              <Input name="lookbackDays" type="number" min="1" defaultValue={String(lookbackDays)} placeholder="Số ngày quét" className="h-11 rounded-2xl" />
-              <Input name="dateFrom" type="date" defaultValue={dateFrom} className="h-11 rounded-2xl" />
-              <Input name="dateTo" type="date" defaultValue={dateTo} className="h-11 rounded-2xl" />
-              <select name="mode" defaultValue={mode} className="h-11 rounded-2xl border border-input bg-background px-3 text-sm">
-                <option value="body">Chỉ tìm trong body</option>
-                <option value="order">Chỉ tìm trong đơn hàng</option>
-              </select>
-              <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-                <input type="checkbox" name="unreadOnly" value="true" defaultChecked={unreadOnly} />
-                Chỉ mail chưa đọc
-              </label>
-              <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-                <input type="checkbox" name="withAttachments" value="true" defaultChecked={withAttachments} />
-                Có tệp đính kèm
-              </label>
-              <button type="submit" className="inline-flex h-11 items-center justify-center rounded-2xl bg-primary px-4 text-sm font-medium text-primary-foreground">
-                <MailSearch className="mr-2 h-4 w-4" />
-                Lọc mailbox
-              </button>
-              <Link
-                href={`/api/search/export?${exportParams.toString()}`}
-                className="inline-flex h-11 items-center justify-center rounded-2xl border border-border bg-background px-4 text-sm font-medium"
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Xuất CSV
-              </Link>
+            <div className="grid gap-3">
+              <div className="grid items-end gap-3 md:grid-cols-2 xl:grid-cols-[1.35fr_1fr_8.5rem_10.5rem_auto_auto]">
+                <div>
+                  <div className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Từ khóa</div>
+                  <Input name="keyword" defaultValue={keyword} placeholder='Từ khóa theo dạng "otp / amazon"' className="h-10 rounded-xl" />
+                </div>
+                <div>
+                  <div className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Người gửi</div>
+                  <Input name="sender" defaultValue={sender} placeholder="Người gửi" className="h-10 rounded-xl" />
+                </div>
+                <div>
+                  <div className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Khoảng ngày</div>
+                  <Select name="lookbackDays" defaultValue={String(lookbackDays)}>
+                    <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 ngày</SelectItem>
+                      <SelectItem value="7">7 ngày</SelectItem>
+                      <SelectItem value="30">30 ngày</SelectItem>
+                      <SelectItem value="90">90 ngày</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <div className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Phạm vi</div>
+                  <Select name="mode" defaultValue={mode}>
+                    <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="body">Chỉ tìm trong body</SelectItem>
+                      <SelectItem value="order">Chỉ tìm trong đơn hàng</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <div className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-transparent">.</div>
+                  <button type="submit" className="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground">
+                    <MailSearch className="mr-2 h-4 w-4" />
+                    Lọc mailbox
+                  </button>
+                </div>
+                <div>
+                  <div className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-transparent">.</div>
+                  <Link
+                    href={`/api/search/export?${exportParams.toString()}`}
+                    className="control-surface inline-flex h-10 items-center justify-center rounded-xl px-4 text-sm font-medium text-foreground"
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Xuất CSV
+                  </Link>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-6">
+                <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                  <input type="checkbox" name="unreadOnly" value="true" defaultChecked={unreadOnly} />
+                  Chỉ mail chưa đọc
+                </label>
+                <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                  <input type="checkbox" name="withAttachments" value="true" defaultChecked={withAttachments} />
+                  Có tệp đính kèm
+                </label>
+              </div>
             </div>
           </form>
         </CardContent>
       </Card>
 
-      {selection.selectedMailboxIds.length === 0 ? (
-        <Card className="rounded-[28px] border-border/70 bg-white/75">
+      {selectedMailboxIds.length === 0 ? (
+        <Card className="rounded-[28px] bg-card/88">
           <CardContent className="flex flex-col items-center gap-3 p-12 text-center">
             <FileSearch className="h-10 w-10 text-muted-foreground" />
             <h2 className="text-xl font-semibold">Chưa chọn mailbox</h2>
@@ -129,10 +173,10 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         </Card>
       ) : (
         <div className="space-y-3">
-          <Card className="rounded-[20px] border-border/70 bg-white/75 shadow-sm">
+          <Card className="rounded-[20px] bg-card/88">
             <CardContent className="flex flex-col gap-2 p-4 xl:flex-row xl:items-center xl:justify-between">
               <span className="mr-4 text-sm font-medium text-muted-foreground">
-                Phạm vi tìm kiếm: {selection.selectedMailboxIds.length} mailbox, {results.length} kết quả duy nhất
+                Phạm vi tìm kiếm: {selectedMailboxIds.length} mailbox, {results.length} kết quả duy nhất
               </span>
               <span className="text-sm text-muted-foreground">{effectiveSummary || "mode:body | days:30"}</span>
             </CardContent>
@@ -140,7 +184,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
           {results.length > 0 ? (
             results.map((result) => (
-              <Card key={result.id} className="rounded-[28px] border-border/70 bg-white/75">
+              <Card key={result.id} className="rounded-[28px] bg-card/88">
                 <CardContent className="space-y-4 p-6">
                   <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
                     <div>
@@ -157,7 +201,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                             Tệp đính kèm
                           </Badge>
                         ) : null}
-                        {mode === "order" ? <Badge className="rounded-full bg-amber-100 text-amber-900 hover:bg-amber-100">Mode đơn hàng</Badge> : null}
+                        {mode === "order" ? <Badge className="semantic-warning rounded-full border hover:brightness-105">Mode đơn hàng</Badge> : null}
                       </div>
                       <p className="mt-3 text-lg font-semibold">{result.subject || "Không có tiêu đề"}</p>
                       <p className="mt-1 text-sm text-muted-foreground">{result.from}</p>
@@ -185,7 +229,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                   <p className="text-sm leading-7 text-muted-foreground">{truncate(result.snippet || result.body, mode === "order" ? 220 : 320)}</p>
 
                   <div className="flex flex-wrap gap-2">
-                    <Link href={`/messages/${result.messageId}`} className="rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium">
+                    <Link href={`/messages/${result.messageId}`} className="control-surface rounded-xl px-3 py-2 text-sm font-medium text-foreground">
                       Mở email
                     </Link>
                   </div>
@@ -193,7 +237,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               </Card>
             ))
           ) : (
-            <Card className="rounded-[28px] border-border/70 bg-white/75">
+            <Card className="rounded-[28px] bg-card/88">
               <CardContent className="flex flex-col items-center gap-3 p-12 text-center">
                 <FileSearch className="h-10 w-10 text-muted-foreground" />
                 <h2 className="text-xl font-semibold">Không có kết quả phù hợp</h2>
@@ -208,3 +252,6 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     </div>
   );
 }
+
+
+

@@ -24,7 +24,7 @@ export default async function MessageDetailPage({ params }: MessagePageProps) {
 
   return (
     <div className="space-y-4">
-      <Card className="rounded-[28px] border-border/70 bg-white/75">
+      <Card className="rounded-[28px] bg-card/88">
         <CardHeader>
           <CardTitle>{data.message.subject ?? "No subject"}</CardTitle>
           <p className="text-sm text-muted-foreground">{data.message.fromHeader || "Unknown sender"}</p>
@@ -63,7 +63,7 @@ export default async function MessageDetailPage({ params }: MessagePageProps) {
       </Card>
 
       <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-        <Card className="rounded-[28px] border-border/70 bg-white/75">
+        <Card className="rounded-[28px] bg-card/88">
           <CardContent className="p-6">
             <Tabs defaultValue={data.message.htmlBody ? "html" : "plain"} className="space-y-4">
               <TabsList className="rounded-2xl">
@@ -75,7 +75,7 @@ export default async function MessageDetailPage({ params }: MessagePageProps) {
               </TabsList>
 
               <TabsContent value="plain">
-                <pre className="max-h-[680px] overflow-auto rounded-3xl border border-border/60 bg-background/80 p-5 text-sm whitespace-pre-wrap">
+                <pre className="subpanel-surface max-h-[680px] overflow-auto rounded-3xl p-5 text-sm whitespace-pre-wrap">
                   {data.message.plainTextBody ?? data.message.normalizedText ?? data.message.snippet ?? "No plain text body."}
                 </pre>
               </TabsContent>
@@ -96,7 +96,7 @@ export default async function MessageDetailPage({ params }: MessagePageProps) {
               </TabsContent>
 
               <TabsContent value="debug">
-                <pre className="max-h-[680px] overflow-auto rounded-3xl border border-border/60 bg-background/80 p-5 text-xs whitespace-pre-wrap">
+                <pre className="subpanel-surface max-h-[680px] overflow-auto rounded-3xl p-5 text-xs whitespace-pre-wrap">
                   {JSON.stringify(
                     {
                       headers: JSON.parse(data.message.rawHeadersJson ?? "[]"),
@@ -112,14 +112,14 @@ export default async function MessageDetailPage({ params }: MessagePageProps) {
         </Card>
 
         <div className="space-y-4">
-          <Card className="rounded-[28px] border-border/70 bg-white/75">
+          <Card className="rounded-[28px] bg-card/88">
             <CardHeader>
               <CardTitle>OTP detections</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {data.otpDetections.length > 0 ? (
                 data.otpDetections.map((otp) => (
-                  <div key={otp.id} className="rounded-2xl border border-border/60 bg-background/80 p-4">
+                  <div key={otp.id} className="subpanel-surface rounded-2xl p-4">
                     <div className="flex items-center justify-between gap-3">
                       <p className="text-lg font-semibold">{otp.code}</p>
                       <ConfidenceBadge value={otp.confidenceLabel} />
@@ -133,7 +133,7 @@ export default async function MessageDetailPage({ params }: MessagePageProps) {
             </CardContent>
           </Card>
 
-          <Card className="rounded-[28px] border-border/70 bg-white/75">
+          <Card className="rounded-[28px] bg-card/88">
             <CardHeader>
               <CardTitle>Order extraction</CardTitle>
             </CardHeader>

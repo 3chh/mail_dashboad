@@ -1,3 +1,5 @@
+import { extractPostalCode, normalizeWarehouseAddress } from "@/lib/utils";
+
 type LocalSearchInput = {
   keyword?: string;
   sender?: string;
@@ -7,6 +9,13 @@ type LocalSearchInput = {
   withAttachments?: boolean;
   mode?: "body" | "order";
   lookbackDays?: number;
+};
+
+export type WarehouseLookupRow = {
+  id: string;
+  name: string;
+  address: string;
+  normalizedAddress: string;
 };
 
 export function parseRequiredKeywords(rawKeyword?: string) {
@@ -94,11 +103,7 @@ export function formatSearchExportDate(value: Date | string | null | undefined) 
 }
 
 export function extractTrackingNumber(bodyText: string) {
-  const patterns = [
-    /【送り状番号】\s*(\d{12})/i,
-    /ã€é€ã‚ŠçŠ¶ç•ªå·ã€‘\s*(\d{12})/i,
-    /\b(\d{12})\b/,
-  ];
+  const patterns = [/\u3010\u9001\u308a\u72b6\u756a\u53f7\u3011\s*(\d{12})/i, /\b(\d{12})\b/];
 
   for (const pattern of patterns) {
     const match = bodyText.match(pattern);
@@ -110,33 +115,169 @@ export function extractTrackingNumber(bodyText: string) {
   return "N/A";
 }
 
-export function extractAddressLine(bodyText: string) {
+function shouldAppendNextAddressLine(line: string | undefined) {
+  if (!line) {
+    return false;
+  }
+
+  const normalized = line.trim();
+  if (!normalized) {
+    return false;
+  }
+
+  return !/^(\u3010|\[|tracking|\u9001\u308a\u72b6|order|invoice|subject|\u4ef6\u540d)/i.test(normalized) && normalized.length <= 120;
+}
+
+export function extractAddressCandidates(bodyText: string) {
   const lines = bodyText
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
 
+  const candidates: string[] = [];
+  const seen = new Set<string>();
+
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index]!;
-    const looksLikePostal =
-      line.includes("〒") ||
-      line.includes("ã€’") ||
-      /\b\d{3}-\d{4}\b/.test(line);
+    const looksLikePostalLine = line.includes("\u3012") || /\b\d{3}-\d{4}\b/.test(line) || /\b\d{7}\b/.test(line);
 
-    if (!looksLikePostal) {
+    if (!looksLikePostalLine) {
       continue;
     }
 
     const nextLine = lines[index + 1];
-    const appendNextLine =
-      nextLine &&
-      !/^(【|\[|tracking|送り状|order|invoice|subject)/i.test(nextLine) &&
-      nextLine.length <= 120;
+    const combined = `${line}${shouldAppendNextAddressLine(nextLine) ? ` ${nextLine}` : ""}`.trim();
 
-    return `${line}${appendNextLine ? ` ${nextLine}` : ""}`;
+    if (!seen.has(combined)) {
+      seen.add(combined);
+      candidates.push(combined);
+    }
   }
 
-  return "N/A";
+  if (candidates.length === 0) {
+    const fallback = lines.find((line) => /\b\d{3}-\d{4}\b/.test(line) || /\b\d{7}\b/.test(line));
+    if (fallback) {
+      candidates.push(fallback.trim());
+    }
+  }
+
+  return candidates;
+}
+
+export function extractAddressLine(bodyText: string) {
+  const candidates = extractAddressCandidates(bodyText);
+  return candidates[0] ?? "N/A";
+}
+
+function buildCharacterBigrams(value: string) {
+  if (value.length <= 1) {
+    return [value];
+  }
+
+  const bigrams: string[] = [];
+  for (let index = 0; index < value.length - 1; index += 1) {
+    bigrams.push(value.slice(index, index + 2));
+  }
+  return bigrams;
+}
+
+function calculateDiceSimilarity(left: string, right: string) {
+  if (!left || !right) {
+    return 0;
+  }
+
+  if (left === right) {
+    return 1;
+  }
+
+  if (left.includes(right) || right.includes(left)) {
+    return 0.96;
+  }
+
+  const leftBigrams = buildCharacterBigrams(left);
+  const rightBigrams = buildCharacterBigrams(right);
+  const counts = new Map<string, number>();
+
+  for (const item of leftBigrams) {
+    counts.set(item, (counts.get(item) ?? 0) + 1);
+  }
+
+  let intersection = 0;
+  for (const item of rightBigrams) {
+    const count = counts.get(item) ?? 0;
+    if (count > 0) {
+      intersection += 1;
+      counts.set(item, count - 1);
+    }
+  }
+
+  return (2 * intersection) / (leftBigrams.length + rightBigrams.length);
+}
+
+function scoreWarehouseMatch(candidateAddress: string, warehouse: WarehouseLookupRow) {
+  const normalizedCandidate = normalizeWarehouseAddress(candidateAddress);
+  if (!normalizedCandidate || !warehouse.normalizedAddress) {
+    return 0;
+  }
+
+  let score = calculateDiceSimilarity(normalizedCandidate, warehouse.normalizedAddress);
+  const candidatePostal = extractPostalCode(candidateAddress);
+  const warehousePostal = extractPostalCode(warehouse.address);
+
+  if (candidatePostal && warehousePostal && candidatePostal === warehousePostal) {
+    score += 0.12;
+  }
+
+  if (
+    warehouse.normalizedAddress.includes(normalizedCandidate) ||
+    normalizedCandidate.includes(warehouse.normalizedAddress)
+  ) {
+    score = Math.max(score, 0.97);
+  }
+
+  return Math.min(score, 1);
+}
+
+export function resolveWarehouseMatch(bodyText: string, warehouses: WarehouseLookupRow[]) {
+  const candidates = extractAddressCandidates(bodyText);
+  const fallbackAddress = candidates[0] ?? "N/A";
+
+  if (warehouses.length === 0 || candidates.length === 0) {
+    return {
+      address: fallbackAddress,
+      warehouse: "N/A",
+      score: 0,
+    };
+  }
+
+  let bestMatch: { address: string; warehouse: string; score: number } = {
+    address: fallbackAddress,
+    warehouse: "N/A",
+    score: 0,
+  };
+
+  for (const candidate of candidates) {
+    for (const warehouse of warehouses) {
+      const score = scoreWarehouseMatch(candidate, warehouse);
+      if (score > bestMatch.score) {
+        bestMatch = {
+          address: candidate,
+          warehouse: warehouse.name,
+          score,
+        };
+      }
+    }
+  }
+
+  if (bestMatch.score < 0.45) {
+    return {
+      address: bestMatch.address || fallbackAddress,
+      warehouse: "N/A",
+      score: bestMatch.score,
+    };
+  }
+
+  return bestMatch;
 }
 
 export function buildLocalSearchSummary(input: LocalSearchInput) {
@@ -178,8 +319,8 @@ export function buildLocalSearchSummary(input: LocalSearchInput) {
 
 export function buildSyncJobLabel(days: number) {
   if (days <= 1) {
-    return "Đồng bộ 1 ngày";
+    return "??ng b? 1 ng?y";
   }
 
-  return `Đồng bộ ${days} ngày`;
+  return `??ng b? ${days} ng?y`;
 }

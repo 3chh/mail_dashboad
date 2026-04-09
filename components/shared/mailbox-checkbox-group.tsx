@@ -19,7 +19,7 @@ export function MailboxCheckboxGroup({
       {mailboxes.map((mailbox) => (
         <label
           key={mailbox.id}
-          className="flex items-center gap-3 rounded-2xl border border-border/70 bg-background/70 px-4 py-3 text-sm"
+          className="subpanel-surface flex items-center gap-3 rounded-2xl px-4 py-3 text-sm"
         >
           <input
             type="checkbox"
