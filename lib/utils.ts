@@ -9,25 +9,25 @@ export function cn(...inputs: ClassValue[]) {
 
 export function formatRelativeTime(value: Date | string | null | undefined) {
   if (!value) {
-    return "kh?ng c?";
+    return "không có";
   }
 
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) {
-    return "kh?ng c?";
+    return "không có";
   }
 
-  return `${formatDistanceToNowStrict(date, { locale: vi })} tr??c`;
+  return `${formatDistanceToNowStrict(date, { locale: vi })} trước`;
 }
 
 export function formatDateTime(value: Date | string | null | undefined) {
   if (!value) {
-    return "kh?ng c?";
+    return "không có";
   }
 
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) {
-    return "kh?ng c?";
+    return "không có";
   }
 
   return new Intl.DateTimeFormat("vi-VN", {
@@ -38,7 +38,7 @@ export function formatDateTime(value: Date | string | null | undefined) {
 
 export function formatCurrency(amount: number | null | undefined, currency = "USD") {
   if (amount == null || Number.isNaN(amount)) {
-    return "kh?ng c?";
+    return "không có";
   }
 
   try {

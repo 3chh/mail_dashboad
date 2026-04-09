@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -20,6 +20,7 @@ import { MailboxStatusBadge } from "@/components/shared/mailbox-status-badge";
 import { ProviderBadge } from "@/components/shared/provider-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -96,13 +97,6 @@ export function MailboxesClient({
       setDragMode(null);
     }
 
-    function handlePointerDown(event: MouseEvent) {
-      const target = event.target;
-      if (!(target instanceof Element) || !target.closest("[data-mailbox-action-menu]")) {
-        setOpenActionMenuId(null);
-      }
-    }
-
     function handleConsentComplete() {
       setBusyMailboxId(null);
       setOpenActionMenuId(null);
@@ -124,7 +118,6 @@ export function MailboxesClient({
     const channel = typeof window !== "undefined" && "BroadcastChannel" in window ? new BroadcastChannel("mailbox-consent") : null;
     channel?.addEventListener("message", handleConsentComplete);
     window.addEventListener("mouseup", handleMouseUp);
-    window.addEventListener("mousedown", handlePointerDown);
     window.addEventListener("storage", handleConsentStorage);
     window.addEventListener("message", handleConsentMessage);
     window.addEventListener("focus", handleConsentComplete);
@@ -133,7 +126,6 @@ export function MailboxesClient({
       channel?.removeEventListener("message", handleConsentComplete);
       channel?.close();
       window.removeEventListener("mouseup", handleMouseUp);
-      window.removeEventListener("mousedown", handlePointerDown);
       window.removeEventListener("storage", handleConsentStorage);
       window.removeEventListener("message", handleConsentMessage);
       window.removeEventListener("focus", handleConsentComplete);
@@ -557,7 +549,7 @@ export function MailboxesClient({
       case "ACTIVE":
         return "Đang hoạt động";
       case "PENDING_CONSENT":
-        return "Chờ consent";
+        return "Chờ cấp quyền";
       case "RECONNECT_REQUIRED":
         return "Cần kết nối lại";
       case "ERROR":
@@ -921,68 +913,67 @@ export function MailboxesClient({
                                   <Copy className="h-4 w-4" />
                                 </Button>
                               ) : null}
-                              <div className="relative">
-                                <Button
+                              <DropdownMenu
+                                open={openActionMenuId === mailbox.id}
+                                onOpenChange={(open) => setOpenActionMenuId(open ? mailbox.id : null)}
+                              >
+                                <DropdownMenuTrigger
                                   type="button"
-                                  variant="ghost"
-                                  size="icon-sm"
-                                  className="rounded-xl text-muted-foreground hover:text-foreground"
+                                  className="group/button inline-flex size-7 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-all outline-none hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40"
                                   title="Thêm thao tác"
                                   aria-label="Thêm thao tác"
-                                  onClick={() => setOpenActionMenuId((current) => (current === mailbox.id ? null : mailbox.id))}
+                                  onMouseDown={(event) => event.stopPropagation()}
+                                  onClick={(event) => event.stopPropagation()}
                                 >
                                   <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                                {openActionMenuId === mailbox.id ? (
-                                  <div className="panel-surface absolute right-0 top-10 z-30 w-72 max-w-[22rem] rounded-2xl p-2 text-popover-foreground">
-                                    <div className="px-2 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                                      Thao tác
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" sideOffset={6} className="w-72 max-w-[22rem] rounded-2xl p-2 text-popover-foreground">
+                                  <div className="px-2 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                                    Thao tác
+                                  </div>
+                                  <DropdownMenuItem
+                                    className="rounded-xl px-3 py-2"
+                                    onClick={() => {
+                                      beginEditMailbox(mailbox);
+                                      setOpenActionMenuId(null);
+                                    }}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                    <span>Sửa</span>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    variant="destructive"
+                                    className="rounded-xl px-3 py-2"
+                                    onClick={() => {
+                                      setOpenActionMenuId(null);
+                                      void deleteMailbox(mailbox);
+                                    }}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    <span>Xóa</span>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <div className="px-2 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                                    Thông tin
+                                  </div>
+                                  <div className="space-y-3 px-3 py-2 text-sm">
+                                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1">
+                                      <span className="min-w-0 whitespace-normal break-words text-muted-foreground">Số mail</span>
+                                      <span className="text-right font-medium text-foreground">{mailbox.messageCount}</span>
                                     </div>
-                                    <button
-                                      type="button"
-                                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-accent/75"
-                                      onClick={() => {
-                                        beginEditMailbox(mailbox);
-                                        setOpenActionMenuId(null);
-                                      }}
-                                    >
-                                      <Pencil className="h-4 w-4" />
-                                      <span>Sửa</span>
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-destructive hover:bg-[color:var(--danger-soft)]"
-                                      onClick={() => {
-                                        setOpenActionMenuId(null);
-                                        void deleteMailbox(mailbox);
-                                      }}
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                      <span>Xóa</span>
-                                    </button>
-                                    <div className="my-2 h-px bg-border" />
-                                    <div className="px-2 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                                      Thông tin
+                                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1">
+                                      <span className="min-w-0 whitespace-normal break-words text-muted-foreground">Số job</span>
+                                      <span className="text-right font-medium text-foreground">{mailbox.jobCount}</span>
                                     </div>
-                                    <div className="space-y-3 px-3 py-2 text-sm">
-                                      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1">
-                                        <span className="min-w-0 whitespace-normal break-words text-muted-foreground">Số mail</span>
-                                        <span className="text-right font-medium text-foreground">{mailbox.messageCount}</span>
-                                      </div>
-                                      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1">
-                                        <span className="min-w-0 whitespace-normal break-words text-muted-foreground">Số job</span>
-                                        <span className="text-right font-medium text-foreground">{mailbox.jobCount}</span>
-                                      </div>
-                                      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,10rem)] items-start gap-x-4 gap-y-1">
-                                        <span className="min-w-0 whitespace-normal break-words text-muted-foreground">Last sync</span>
-                                        <span className="min-w-0 whitespace-normal break-words text-right font-medium leading-6 text-foreground">
-                                          {mailbox.lastSyncedAt ? formatDateTime(mailbox.lastSyncedAt) : "Chưa đồng bộ"}
-                                        </span>
-                                      </div>
+                                    <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,10rem)] items-start gap-x-4 gap-y-1">
+                                      <span className="min-w-0 whitespace-normal break-words text-muted-foreground">Last sync</span>
+                                      <span className="min-w-0 whitespace-normal break-words text-right font-medium leading-6 text-foreground">
+                                        {mailbox.lastSyncedAt ? formatDateTime(mailbox.lastSyncedAt) : "Chưa đồng bộ"}
+                                      </span>
                                     </div>
                                   </div>
-                                ) : null}
-                              </div>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
                           </TableCell>
                         </TableRow>

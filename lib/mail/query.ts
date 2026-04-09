@@ -319,8 +319,8 @@ export function buildLocalSearchSummary(input: LocalSearchInput) {
 
 export function buildSyncJobLabel(days: number) {
   if (days <= 1) {
-    return "??ng b? 1 ng?y";
+    return "Đồng bộ 1 ngày";
   }
 
-  return `??ng b? ${days} ng?y`;
+  return `Đồng bộ ${days} ngày`;
 }
