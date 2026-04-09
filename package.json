@@ -9,7 +9,7 @@
                     "lint":  "eslint",
                     "db:generate":  "prisma generate",
                     "db:migrate":  "prisma migrate dev",
-                    "db:apply":  "prisma db execute --file prisma/migrations/20260327000000_init/migration.sql --schema prisma/schema.prisma",
+                    "db:apply":  "prisma migrate deploy",
                     "db:studio":  "prisma studio",
                     "postinstall":  "prisma generate"
                 },

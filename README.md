@@ -7,7 +7,7 @@ Kien truc hien tai da duoc refactor theo huong:
 - admin dang nhap vao web app bang tai khoan he thong rieng
 - moi mailbox Gmail / Hotmail consent 1 lan dau de lay `refresh token`
 - server luu token da ma hoa
-- he thong sync mail ve SQLite theo lich hoac sync tay
+- he thong sync mail ve PostgreSQL theo lich hoac sync tay
 - search, OTP, order extraction doc tren local store
 
 Phase hien tai duoc toi uu cho pilot:
@@ -32,7 +32,7 @@ Phase hien tai duoc toi uu cho pilot:
 - Next.js 16 App Router
 - React 19
 - NextAuth
-- Prisma + SQLite
+- Prisma + PostgreSQL
 - Gmail API
 - Microsoft Graph API
 - Tailwind + shadcn/ui
@@ -131,7 +131,7 @@ NEXTAUTH_SECRET=replace-with-a-long-random-string
 APP_PUBLIC_URL=http://localhost:3000
 APP_INTERNAL_URL=http://127.0.0.1:3000
 NEXTAUTH_URL=http://localhost:3000
-DATABASE_URL="file:./dev.db"
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gmail_dashboard?schema=public"
 ```
 
 Ghi chu:
@@ -156,22 +156,24 @@ npm install
 
 ## 4. Khoi tao database
 
+Dam bao PostgreSQL dang chay va database `gmail_dashboard` da ton tai.
+
 Generate Prisma client:
 
 ```bash
 npm run db:generate
 ```
 
-Dong bo schema vao SQLite:
+Tao migration va apply vao PostgreSQL:
 
 ```bash
-npx prisma db push
+npm run db:migrate
 ```
 
-Neu can reset local DB trong luc dev:
+Neu can apply migration tren moi truong deploy:
 
 ```bash
-npx prisma db push --force-reset
+npm run db:apply
 ```
 
 Mo Prisma Studio:
