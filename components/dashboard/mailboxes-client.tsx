@@ -606,7 +606,7 @@ export function MailboxesClient({
                 placeholder="Tên hiển thị (không bắt buộc)"
                 className="h-10 rounded-xl px-3"
               />
-              <Select value={provider} onValueChange={(value) => setProvider(value as "GMAIL" | "OUTLOOK")}>
+              <Select value={provider} onValueChange={(value) => value && setProvider(value as "GMAIL" | "OUTLOOK")}>
                 <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm text-foreground/95">
                   <SelectValue>{(value) => getProviderLabel(value as string | null)}</SelectValue>
                 </SelectTrigger>
@@ -617,7 +617,7 @@ export function MailboxesClient({
               </Select>
               <div className="flex items-center gap-2">
                 <div className="flex-1">
-                  <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
+                  <Select value={selectedGroupId} onValueChange={(value) => setSelectedGroupId(value ?? "ALL")}>
                     <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm text-foreground/95">
                       <SelectValue>{(value) => getSelectedGroupLabel(value as string | null)}</SelectValue>
                     </SelectTrigger>
@@ -686,7 +686,7 @@ export function MailboxesClient({
                   placeholder="Tên hiển thị"
                   className="h-10 rounded-xl px-3"
                 />
-                <Select value={editGroupId} onValueChange={setEditGroupId}>
+                <Select value={editGroupId} onValueChange={(value) => setEditGroupId(value ?? "ALL")}>
                   <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm text-foreground/95">
                     <SelectValue>{(value) => getGroupLabel(value as string | null)}</SelectValue>
                   </SelectTrigger>
@@ -761,7 +761,7 @@ export function MailboxesClient({
                 </div>
                 <div className="w-full">
                   <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Nhà cung cấp</div>
-                  <Select value={providerFilter} onValueChange={(value) => setProviderFilter(value as "ALL" | "GMAIL" | "OUTLOOK")}>
+                  <Select value={providerFilter} onValueChange={(value) => setProviderFilter((value ?? "ALL") as "ALL" | "GMAIL" | "OUTLOOK")}>
                     <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm text-foreground/95">
                       <SelectValue>{(value) => getProviderFilterLabel(value as string | null)}</SelectValue>
                     </SelectTrigger>
@@ -774,7 +774,7 @@ export function MailboxesClient({
                 </div>
                 <div className="w-full">
                   <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Trạng thái</div>
-                  <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as "ALL" | MailboxStatus)}>
+                  <Select value={statusFilter} onValueChange={(value) => setStatusFilter((value ?? "ALL") as "ALL" | MailboxStatus)}>
                     <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm text-foreground/95">
                       <SelectValue>{(value) => getStatusFilterLabel(value as string | null)}</SelectValue>
                     </SelectTrigger>
@@ -791,7 +791,7 @@ export function MailboxesClient({
                 </div>
                 <div className="w-full">
                   <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Nhóm</div>
-                  <Select value={groupFilter} onValueChange={setGroupFilter}>
+                  <Select value={groupFilter} onValueChange={(value) => setGroupFilter(value ?? "ALL")}>
                     <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm text-foreground/95">
                       <SelectValue>{(value) => getGroupFilterLabel(value as string | null)}</SelectValue>
                     </SelectTrigger>
@@ -813,7 +813,7 @@ export function MailboxesClient({
               <div className="grid items-end gap-2.5 xl:grid-cols-[7rem_8.5rem]">
                 <div>
                   <div className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Khoảng ngày</div>
-                  <Select value={syncWindowDays} onValueChange={setSyncWindowDays}>
+                  <Select value={syncWindowDays} onValueChange={(value) => setSyncWindowDays(value ?? "7")}>
                     <SelectTrigger className="h-10 w-[7rem] rounded-xl px-3 text-sm text-foreground/95">
                       <SelectValue>{(value) => getSyncWindowLabel(value as string | null)}</SelectValue>
                     </SelectTrigger>

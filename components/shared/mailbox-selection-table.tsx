@@ -196,7 +196,7 @@ export function MailboxSelectionTable({
         </div>
         <div>
           <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Nhà cung cấp</div>
-          <Select value={providerFilter} onValueChange={(value) => setProviderFilter(value as "ALL" | "GMAIL" | "OUTLOOK")}>
+        <Select value={providerFilter} onValueChange={(value) => setProviderFilter((value ?? "ALL") as "ALL" | "GMAIL" | "OUTLOOK")}>
             <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm">
               <SelectValue>{(value) => getProviderFilterLabel(value as string | null)}</SelectValue>
             </SelectTrigger>
@@ -209,7 +209,7 @@ export function MailboxSelectionTable({
         </div>
         <div>
           <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Nhóm</div>
-          <Select value={groupFilter} onValueChange={setGroupFilter}>
+        <Select value={groupFilter} onValueChange={(value) => setGroupFilter(value ?? "ALL")}>
             <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm">
               <SelectValue>{(value) => getGroupFilterLabel(value as string | null)}</SelectValue>
             </SelectTrigger>

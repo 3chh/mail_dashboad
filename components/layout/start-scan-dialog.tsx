@@ -58,7 +58,7 @@ export function StartScanDialog() {
             <label htmlFor="sync-range" className="text-sm font-medium">
               Khoảng thời gian đồng bộ
             </label>
-            <Select value={range} onValueChange={setRange}>
+            <Select value={range} onValueChange={(value) => setRange(value ?? "7")}>
               <SelectTrigger id="sync-range" className="h-11 w-full rounded-2xl px-3 text-sm">
                 <SelectValue>
                   {(value) => {
