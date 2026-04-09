@@ -15,9 +15,6 @@ export default async function SettingsPage() {
             <UserCog className="h-5 w-5 text-primary" />
             Tài khoản quản trị
           </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Xác thực quản trị được tách khỏi OAuth của mailbox. Consent mailbox được xử lý riêng trên dashboard.
-          </p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="subpanel-surface rounded-3xl p-5">

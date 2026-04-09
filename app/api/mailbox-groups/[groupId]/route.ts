@@ -18,14 +18,14 @@ export async function PATCH(request: Request, context: { params: Promise<{ group
   const admin = await requireAdmin();
 
   if (!admin) {
-    return NextResponse.json({ error: "Kh?ng c? quy?n truy c?p." }, { status: 401 });
+    return NextResponse.json({ error: "Không có quyền truy cập." }, { status: 401 });
   }
 
   const { groupId } = await context.params;
   const parsed = updateMailboxGroupSchema.safeParse(await request.json());
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "T?n nh?m kh?ng h?p l?." }, { status: 400 });
+    return NextResponse.json({ error: "Tên nhóm không hợp lệ." }, { status: 400 });
   }
 
   const group = await prisma.mailboxGroup.findFirst({
@@ -36,7 +36,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ group
   });
 
   if (!group) {
-    return NextResponse.json({ error: "Kh?ng t?m th?y nh?m mailbox." }, { status: 404 });
+    return NextResponse.json({ error: "Không tìm thấy nhóm mailbox." }, { status: 404 });
   }
 
   const updated = await prisma.mailboxGroup.update({
@@ -55,7 +55,7 @@ export async function DELETE(_request: Request, context: { params: Promise<{ gro
   const admin = await requireAdmin();
 
   if (!admin) {
-    return NextResponse.json({ error: "Kh?ng c? quy?n truy c?p." }, { status: 401 });
+    return NextResponse.json({ error: "Không có quyền truy cập." }, { status: 401 });
   }
 
   const { groupId } = await context.params;
@@ -67,7 +67,7 @@ export async function DELETE(_request: Request, context: { params: Promise<{ gro
   });
 
   if (!group) {
-    return NextResponse.json({ error: "Kh?ng t?m th?y nh?m mailbox." }, { status: 404 });
+    return NextResponse.json({ error: "Không tìm thấy nhóm mailbox." }, { status: 404 });
   }
 
   await prisma.$transaction([

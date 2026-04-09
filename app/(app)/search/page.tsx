@@ -36,19 +36,19 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const results =
     selectedMailboxIds.length > 0
       ? await searchMailToolResults(
-          selectedMailboxIds,
-          {
-            keyword: keyword || undefined,
-            sender: sender || undefined,
-            dateFrom: dateFrom || undefined,
-            dateTo: dateTo || undefined,
-            unreadOnly,
-            withAttachments,
-            lookbackDays,
-            mode,
-          },
-          admin.id,
-        )
+        selectedMailboxIds,
+        {
+          keyword: keyword || undefined,
+          sender: sender || undefined,
+          dateFrom: dateFrom || undefined,
+          dateTo: dateTo || undefined,
+          unreadOnly,
+          withAttachments,
+          lookbackDays,
+          mode,
+        },
+        admin.id,
+      )
       : [];
 
   const effectiveSummary = buildLocalSearchSummary({
@@ -242,7 +242,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 <FileSearch className="h-10 w-10 text-muted-foreground" />
                 <h2 className="text-xl font-semibold">Không có kết quả phù hợp</h2>
                 <p className="max-w-2xl text-sm leading-7 text-muted-foreground">
-                  Hãy đồng bộ mailbox trước, tăng số ngày quét, hoặc nới lỏng bộ lọc người gửi và từ khóa.
+                  Hãy đồng bộ mailbox trước, tăng số ngày quét, hoặc đổi bộ lọc tìm kiếm.
                 </p>
               </CardContent>
             </Card>

@@ -16,8 +16,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         <div className="flex min-w-0 flex-1 flex-col gap-4">
           <header className="panel-surface flex flex-col gap-4 rounded-[28px] px-5 py-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">V?n h?nh mailbox t?p trung</p>
-              <h2 className="mt-2 text-2xl font-semibold">B?ng ?i?u khi?n Gmail v? Hotmail</h2>
+              <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Quản lý mailbox tập trung</p>
+              <h2 className="mt-2 text-2xl font-semibold">Bảng điều khiển Gmail và Hotmail</h2>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">

@@ -5,12 +5,12 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const items = [
-  { href: "/dashboard", label: "B?ng ?i?u khi?n" },
-  { href: "/otp", label: "L?y OTP" },
-  { href: "/search", label: "T?m ki?m" },
+  { href: "/dashboard", label: "Bảng điều khiển" },
+  { href: "/otp", label: "Lấy OTP" },
+  { href: "/search", label: "Tìm kiếm" },
   { href: "/warehouses", label: "Kho" },
-  { href: "/scan-jobs", label: "??ng b?" },
-  { href: "/settings", label: "C?i ??t" },
+  { href: "/scan-jobs", label: "Đồng bộ" },
+  { href: "/settings", label: "Cài đặt" },
 ];
 
 export function MobileNav() {

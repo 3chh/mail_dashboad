@@ -20,7 +20,7 @@ function resolveInitialTheme(): ThemeMode {
 
 export function ThemeToggle() {
   const hydrated = useSyncExternalStore(
-    () => () => {},
+    () => () => { },
     () => true,
     () => false,
   );
@@ -39,15 +39,15 @@ export function ThemeToggle() {
       type="button"
       className="control-surface inline-flex h-10 items-center rounded-xl px-3 text-sm font-medium text-foreground transition"
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      aria-label={hydrated ? (isDark ? "Chuy?n sang giao di?n s?ng" : "Chuy?n sang giao di?n t?i") : "Chuy?n giao di?n"}
-      title={hydrated ? (isDark ? "Chuy?n sang giao di?n s?ng" : "Chuy?n sang giao di?n t?i") : "Chuy?n giao di?n"}
+      aria-label={hydrated ? (isDark ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối") : "Chuyển giao diện"}
+      title={hydrated ? (isDark ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối") : "Chuyển giao diện"}
     >
       {hydrated ? (
         isDark ? <Sun className="mr-2 h-4 w-4 text-primary" /> : <Moon className="mr-2 h-4 w-4 text-primary" />
       ) : (
         <Moon className="mr-2 h-4 w-4 text-primary" />
       )}
-      {hydrated ? (isDark ? "S?ng" : "T?i") : "Giao di?n"}
+      {hydrated ? (isDark ? "Sáng" : "Tối") : "Giao diện"}
     </button>
   );
 }

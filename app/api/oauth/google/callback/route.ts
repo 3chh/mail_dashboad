@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     return renderOAuthCompletionPage({
       success: false,
       provider: "gmail",
-      message: `Google tr? v? l?i: ${error}`,
+      message: `Google trả về lỗi: ${error}`,
     });
   }
 
@@ -22,7 +22,7 @@ export async function GET(request: Request) {
     return renderOAuthCompletionPage({
       success: false,
       provider: "gmail",
-      message: "Ph?n h?i OAuth kh?ng h?p l? ho?c thi?u m? x?c th?c.",
+      message: "Phản hồi OAuth không hợp lệ hoặc thiếu mã xác thực.",
     });
   }
 
@@ -39,7 +39,7 @@ export async function GET(request: Request) {
     return renderOAuthCompletionPage({
       success: false,
       provider: "gmail",
-      message: "Li?n k?t consent ?? h?t h?n ho?c ?? ???c d?ng tr??c ??.",
+      message: "Liên kết consent đã hết hạn hoặc đã được dùng trước đó.",
       mailboxEmail: oauthState?.mailbox.emailAddress ?? null,
     });
   }
@@ -48,7 +48,7 @@ export async function GET(request: Request) {
     const token = await exchangeGoogleCode(code);
 
     if (!token.emailAddress || token.emailAddress !== oauthState.mailbox.emailAddress.toLowerCase()) {
-      throw new Error("Email t?i kho?n Google kh?ng kh?p v?i mailbox.");
+      throw new Error("Email tài khoản Google không khớp với mailbox.");
     }
 
     await prisma.$transaction([
@@ -81,7 +81,7 @@ export async function GET(request: Request) {
     return renderOAuthCompletionPage({
       success: true,
       provider: "gmail",
-      message: "?? c?p quy?n ??c mail th?nh c?ng. Tr?ng th?i mailbox ?? ???c c?p nh?t sang k?t n?i th?nh c?ng.",
+      message: "Cấp quyền đọc mail thành công. Trạng thái mailbox đã được cập nhật sang kết nối thành công.",
       mailboxEmail: oauthState.mailbox.emailAddress,
     });
   } catch (oauthError) {

@@ -95,7 +95,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         <Card className="alert-success rounded-[28px]">
           <CardContent className="flex items-center gap-3 p-4 text-sm">
             <CheckCircle2 className="h-5 w-5" />
-            K?t n?i mailbox th?nh c?ng qua {connected}.
+            Kết nối mailbox thành công qua {connected}.
           </CardContent>
         </Card>
       ) : null}
@@ -112,12 +112,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       <section className="grid gap-3 xl:grid-cols-3">
         <Card size="sm" className="rounded-[24px] bg-card/86">
           <CardHeader className="pb-1.5">
-            <CardTitle className="text-sm">T?ng quan</CardTitle>
+            <CardTitle className="text-sm">Tổng quan</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-2 sm:grid-cols-2">
-            <SummaryMetric title="T?ng mailbox" value={String(data.stats.mailboxCount)} hint="Gmail + Hotmail" icon={Mail} tone="neutral" />
+            <SummaryMetric title="Tổng mailbox" value={String(data.stats.mailboxCount)} hint="Gmail + Hotmail" icon={Mail} tone="neutral" />
             <SummaryMetric
-              title="Ho?t ??ng"
+              title="Hoạt động"
               value={String(data.stats.activeMailboxCount)}
               trailing={`${activePercent}%`}
               hint={`${data.stats.activeMailboxCount} / ${data.stats.mailboxCount} active`}
@@ -130,22 +130,22 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
         <Card size="sm" className="rounded-[24px] bg-card/86">
           <CardHeader className="pb-1.5">
-            <CardTitle className="text-sm">C?nh b?o</CardTitle>
+            <CardTitle className="text-sm">Cảnh báo</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-2 sm:grid-cols-2">
             <SummaryMetric
-              title="K?t n?i l?i"
+              title="Kết nối lại"
               value={String(data.stats.reconnectRequiredCount)}
-              hint="Token h?t h?n"
+              hint="Token hết hạn"
               icon={Unplug}
               tone="warning"
               href="/dashboard?status=RECONNECT_REQUIRED"
               emphasized={data.stats.reconnectRequiredCount > 0}
             />
             <SummaryMetric
-              title="Mailbox l?i"
+              title="Mailbox lỗi"
               value={String(data.stats.errorMailboxCount)}
-              hint="L?i OAuth"
+              hint="Lỗi OAuth"
               icon={AlertTriangle}
               tone="danger"
               href="/dashboard?status=ERROR"
@@ -156,11 +156,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
         <Card size="sm" className="rounded-[24px] bg-card/86">
           <CardHeader className="pb-1.5">
-            <CardTitle className="text-sm">K?t qu?</CardTitle>
+            <CardTitle className="text-sm">Kết quả</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-2 sm:grid-cols-2">
-            <SummaryMetric title="OTP" value={String(data.stats.otpsFound)} hint="?? ph?t hi?n" icon={ShieldCheck} tone="output" />
-            <SummaryMetric title="??n h?ng" value={String(data.stats.ordersFound)} hint="?? tr?ch xu?t" icon={ShoppingBag} tone="output" />
+            <SummaryMetric title="OTP" value={String(data.stats.otpsFound)} hint="Đã phát hiện" icon={ShieldCheck} tone="output" />
+            <SummaryMetric title="Đơn hàng" value={String(data.stats.ordersFound)} hint="Đã trích xuất" icon={ShoppingBag} tone="output" />
           </CardContent>
         </Card>
       </section>
@@ -176,7 +176,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
       <Card className="rounded-[28px] bg-card/86">
         <CardHeader>
-          <CardTitle>Ho?t ??ng g?n ??y</CardTitle>
+          <CardTitle>Hoạt động gần đây</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {data.recentActivity.length > 0 ? (
@@ -194,7 +194,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             ))
           ) : (
             <div className="rounded-2xl border border-dashed border-border p-8 text-sm text-muted-foreground">
-              Ch?a c? ho?t ??ng n?o. H?y th?m mailbox v? ch?y ??ng b? th? nghi?m.
+              Chưa có hoạt động nào. Hãy thêm mailbox và chạy đồng bộ thử nghiệm.
             </div>
           )}
         </CardContent>

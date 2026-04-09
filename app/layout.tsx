@@ -16,8 +16,8 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Trung t?m Mailbox",
-  description: "B?ng ?i?u khi?n qu?n tr? ?? onboarding Gmail v? Hotmail, ??ng b? d? li?u c?c b?, t?m ki?m mail v? l?y OTP.",
+  title: "Trung tâm Mailbox",
+  description: "Bảng điều khiển quản trị để onboarding Gmail và Hotmail, đồng bộ dữ liệu các hòm, tìm kiếm mail và lấy OTP.",
 };
 
 export default function RootLayout({

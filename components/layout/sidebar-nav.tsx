@@ -6,12 +6,12 @@ import { Building2, ChartColumn, MailSearch, Settings2, ShieldCheck, Workflow } 
 import { cn } from "@/lib/utils";
 
 const navigation = [
-  { href: "/dashboard", label: "B?ng ?i?u khi?n", icon: ChartColumn },
-  { href: "/otp", label: "L?y OTP", icon: ShieldCheck },
-  { href: "/search", label: "T?m ki?m", icon: MailSearch },
+  { href: "/dashboard", label: "Bảng điều khiển", icon: ChartColumn },
+  { href: "/otp", label: "Lấy OTP", icon: ShieldCheck },
+  { href: "/search", label: "Tìm kiếm", icon: MailSearch },
   { href: "/warehouses", label: "Kho", icon: Building2 },
-  { href: "/scan-jobs", label: "L?ch s? ??ng b?", icon: Workflow },
-  { href: "/settings", label: "C?i ??t", icon: Settings2 },
+  { href: "/scan-jobs", label: "Lịch sử đồng bộ", icon: Workflow },
+  { href: "/settings", label: "Cài đặt", icon: Settings2 },
 ];
 
 export function SidebarNav() {
@@ -24,10 +24,7 @@ export function SidebarNav() {
           Pilot
         </div>
         <div className="mt-4">
-          <h1 className="text-2xl font-semibold">Trung t?m Mailbox</h1>
-          <p className="mt-2 text-sm leading-6 text-sidebar-foreground/68">
-            V?n h?nh t?p trung Gmail v? Hotmail ?? consent, ??ng b? c?c b?, ph?n nh?m mailbox v? ??i chi?u ??a ch? kho.
-          </p>
+          <h1 className="text-2xl font-semibold">Trung tâm Mailbox</h1>
         </div>
       </div>
 

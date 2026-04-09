@@ -17,19 +17,19 @@ export default async function SignInPage() {
       <div className="grid w-full gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         <section className="panel-surface rounded-[36px] p-8 md:p-12">
           <div className="semantic-brand inline-flex items-center rounded-full border px-4 py-1.5 text-xs font-medium uppercase tracking-[0.24em]">
-            Vận hành mailbox
+            Quản lý mailbox
           </div>
           <h1 className="mt-6 max-w-xl text-5xl font-semibold leading-tight text-balance">
-            Trung tâm điều khiển cho Gmail và Hotmail để consent.
+            Trung tâm điều khiển cho Gmail / Hotmail
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-8 text-muted-foreground">
-            Quản trị viên đăng nhập vào web app, onboarding từng mailbox một lần để lấy refresh token, sau đó server đồng bộ theo lịch và tìm kiếm trên local store.
+            Trình quản lý mailbox tập trung cho Gmail và Hotmail. Sử dụng OAuth2 để kết nối với Gmail và Hotmail.
           </p>
 
           <div className="mt-10 grid gap-4 md:grid-cols-3">
             {[
-              { icon: KeyRound, title: "Xác thực quản trị", text: "Đăng nhập bằng tài khoản hệ thống, không dùng Google login làm xác thực chính." },
-              { icon: Mail, title: "Onboarding mailbox", text: "Kết nối từng Gmail và Hotmail để lưu refresh token sau lần consent đầu tiên." },
+              { icon: KeyRound, title: "Xác thực quản trị", text: "Đăng nhập bằng tài khoản hệ thống." },
+              { icon: Mail, title: "Onboarding mailbox", text: "Kết nối từng Gmail và Hotmail để lưu refresh token sau lần kết nối đầu tiên." },
               { icon: Workflow, title: "Đồng bộ theo lịch", text: "Đồng bộ mail về local store, rồi tìm kiếm và lấy OTP từ dữ liệu đã lưu." },
             ].map((item) => (
               <div key={item.title} className="subpanel-surface rounded-3xl p-5">
@@ -49,14 +49,11 @@ export default async function SignInPage() {
 
           <div className="mt-8 space-y-4">
             <h2 className="text-3xl font-semibold leading-tight">Đăng nhập bằng tài khoản quản trị</h2>
-            <p className="text-sm leading-7 text-white/70">
-              Consent mailbox sẽ được thực hiện riêng cho từng Gmail và Hotmail sau khi quản trị viên vào bảng điều khiển.
-            </p>
           </div>
 
           {missingEnv ? (
             <div className="semantic-warning mt-8 rounded-3xl border p-4 text-sm leading-6">
-              Hãy cấu hình `ADMIN_EMAIL`, `ADMIN_PASSWORD`, và `NEXTAUTH_SECRET` trong `.env` trước khi đăng nhập.
+              Hãy cấu hình trước khi đăng nhập.
             </div>
           ) : null}
 

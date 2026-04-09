@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { Filter, MailOpen, ShieldCheck } from "lucide-react";
 import { getRequiredAdmin } from "@/lib/auth/get-session";
 import { CopyOtpButton } from "@/components/otp/copy-otp-button";
@@ -33,10 +33,10 @@ export default async function OtpPage({ searchParams }: OtpPageProps) {
   const results =
     selectedMailboxIds.length > 0
       ? await getOtpMonitorData(selectedMailboxIds, {
-          sender,
-          unreadOnly,
-          lookbackDays,
-        })
+        sender,
+        unreadOnly,
+        lookbackDays,
+      })
       : [];
 
   return (
@@ -157,7 +157,7 @@ export default async function OtpPage({ searchParams }: OtpPageProps) {
                           ? truncate(candidate.contextSnippet, 260)
                           : result.message
                             ? "Đã tìm thấy mail mới nhất, nhưng extractor không phát hiện mã OTP hợp lệ trong nội dung mail này."
-                            : "Mailbox này chua có mail c?c b? phù h?p v?i b? l?c hi?n t?i. Hãy d?ng b? tru?c r?i b?m Lấy OTP m?i nh?t l?i."}
+                            : "Mailbox này chưa có mail cục bộ phù hợp với bộ lọc hiện tại. Hãy dùng bộ lọc trước rồi bấm Lấy OTP mới nhất lại."}
                       </p>
                     </div>
                     <div className="text-sm text-muted-foreground">

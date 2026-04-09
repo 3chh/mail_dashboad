@@ -57,13 +57,13 @@ export async function POST(request: Request) {
   const admin = await resolveAdminFromSessionUser(session?.user);
 
   if (!admin) {
-    return NextResponse.json({ error: "Kh?ng c? quy?n truy c?p." }, { status: 401 });
+    return NextResponse.json({ error: "Không có quyền truy cập." }, { status: 401 });
   }
 
   const parsed = createMailboxSchema.safeParse(await request.json());
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "Payload mailbox kh?ng h?p l?." }, { status: 400 });
+    return NextResponse.json({ error: "Payload mailbox không hợp lệ." }, { status: 400 });
   }
 
   const groupId = await resolveMailboxGroup(admin.id, {

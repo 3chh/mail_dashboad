@@ -16,13 +16,13 @@ export async function POST(request: Request) {
   const admin = await resolveAdminFromSessionUser(session?.user);
 
   if (!admin) {
-    return NextResponse.json({ error: "Kh?ng c? quy?n truy c?p." }, { status: 401 });
+    return NextResponse.json({ error: "Không có quyền truy cập." }, { status: 401 });
   }
 
   const parsed = warehouseSchema.safeParse(await request.json());
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "D? li?u kho kh?ng h?p l?." }, { status: 400 });
+    return NextResponse.json({ error: "Dữ liệu kho không hợp lệ." }, { status: 400 });
   }
 
   const warehouse = await prisma.warehouse.upsert({

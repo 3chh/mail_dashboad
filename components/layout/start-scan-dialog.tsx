@@ -28,11 +28,11 @@ export function StartScanDialog() {
 
       if (!response.ok) {
         const data = (await response.json().catch(() => null)) as { error?: string } | null;
-        toast.error(data?.error ?? "Kh?ng th? b?t ??u ??ng b?.");
+        toast.error(data?.error ?? "Không thể bắt đầu đồng bộ.");
         return;
       }
 
-      toast.success("?? x?p l?ch ??ng b? cho c?c mailbox ?ang ho?t ??ng.");
+      toast.success("Đã xếp lịch đồng bộ cho các mailbox đang hoạt động.");
       setOpen(false);
       router.push("/scan-jobs");
       router.refresh();
@@ -43,20 +43,20 @@ export function StartScanDialog() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger className="inline-flex h-11 items-center rounded-2xl bg-primary px-5 text-sm font-medium text-primary-foreground shadow-[0_18px_40px_-24px_rgba(44,143,153,0.45)] transition hover:brightness-105">
         <Play className="mr-2 h-4 w-4" />
-        ??ng b? mailbox ?ang ho?t ??ng
+        Đồng bộ mailbox đang hoạt động
       </DialogTrigger>
       <DialogContent className="panel-surface rounded-[28px] bg-card/95">
         <DialogHeader>
-          <DialogTitle>B?t ??u m?t l??t ??ng b?</DialogTitle>
+          <DialogTitle>Bắt đầu một lượt đồng bộ</DialogTitle>
           <DialogDescription>
-            L??t n?y s? t?o job cho t?t c? mailbox ?ang ho?t ??ng v? ch? ??ng b? mail v? local store. T?m ki?m v? l?y OTP s? th?c hi?n ri?ng sau ??.
+            Lượt này sẽ tạo job cho tất cả mailbox đang hoạt động và chỉ đồng bộ mail về local store. Tìm kiếm và lấy OTP sẽ thực hiện riêng sau đó.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5">
           <div className="space-y-2">
             <label htmlFor="sync-range" className="text-sm font-medium">
-              Kho?ng th?i gian ??ng b?
+              Khoảng thời gian đồng bộ
             </label>
             <Select value={range} onValueChange={setRange}>
               <SelectTrigger id="sync-range" className="h-11 w-full rounded-2xl px-3 text-sm">
@@ -64,11 +64,11 @@ export function StartScanDialog() {
                   {(value) => {
                     switch (value) {
                       case "1":
-                        return "1 ng?y g?n ??y";
+                        return "1 ngày gần đây";
                       case "7":
-                        return "7 ng?y g?n ??y";
+                        return "7 ngày gần đây";
                       case "30":
-                        return "30 ng?y g?n ??y";
+                        return "30 ngày gần đây";
                       default:
                         return "";
                     }
@@ -76,16 +76,16 @@ export function StartScanDialog() {
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="1">1 ng?y g?n ??y</SelectItem>
-                <SelectItem value="7">7 ng?y g?n ??y</SelectItem>
-                <SelectItem value="30">30 ng?y g?n ??y</SelectItem>
+                <SelectItem value="1">1 ngày gần đây</SelectItem>
+                <SelectItem value="7">7 ngày gần đây</SelectItem>
+                <SelectItem value="30">30 ngày gần đây</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <Button className="h-11 w-full rounded-2xl" onClick={handleStartSync} disabled={isPending}>
             {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />}
-            ??ng b? ngay
+            Đồng bộ ngay
           </Button>
         </div>
       </DialogContent>

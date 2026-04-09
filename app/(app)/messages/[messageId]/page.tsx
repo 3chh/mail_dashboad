@@ -128,7 +128,7 @@ export default async function MessageDetailPage({ params }: MessagePageProps) {
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-muted-foreground">Chua co OTP detection.</p>
+                <p className="text-sm text-muted-foreground">Chưa có OTP detection.</p>
               )}
             </CardContent>
           </Card>
@@ -166,7 +166,7 @@ export default async function MessageDetailPage({ params }: MessagePageProps) {
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">Chua co order extraction.</p>
+                <p className="text-sm text-muted-foreground">Chưa có order extraction.</p>
               )}
             </CardContent>
           </Card>

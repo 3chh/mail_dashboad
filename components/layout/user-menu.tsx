@@ -18,11 +18,11 @@ export function UserMenu({ name, email, image }: UserMenuProps) {
     <div className="panel-surface flex flex-wrap items-center gap-3 rounded-2xl px-3 py-2">
       <div className="flex items-center gap-3">
         <Avatar className="h-10 w-10">
-          <AvatarImage src={image ?? undefined} alt={name ?? email ?? "Qu?n tr? vi?n"} />
+          <AvatarImage src={image ?? undefined} alt={name ?? email ?? "Quản trị viên"} />
           <AvatarFallback>{initialsFromName(name ?? email)}</AvatarFallback>
         </Avatar>
         <div className="min-w-0">
-          <div className="truncate text-sm font-medium">{name ?? "Qu?n tr? vi?n"}</div>
+          <div className="truncate text-sm font-medium">{name ?? "Quản trị viên"}</div>
           <div className="truncate text-xs text-muted-foreground">{email}</div>
         </div>
       </div>
@@ -34,7 +34,7 @@ export function UserMenu({ name, email, image }: UserMenuProps) {
           className="control-surface inline-flex h-10 items-center rounded-xl px-3 text-sm font-medium text-foreground transition hover:text-foreground"
         >
           <Settings className="mr-2 h-4 w-4" />
-          C?i ??t
+          Cài đặt
         </Link>
         <button
           type="button"
@@ -42,7 +42,7 @@ export function UserMenu({ name, email, image }: UserMenuProps) {
           onClick={() => signOut({ callbackUrl: "/sign-in" })}
         >
           <LogOut className="mr-2 h-4 w-4" />
-          ??ng xu?t
+          Đăng xuất
         </button>
       </div>
     </div>

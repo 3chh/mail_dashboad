@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { RefreshCw } from "lucide-react";
+import { ActivitySquare, RefreshCw } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -64,8 +64,15 @@ export function JobsClient({ initialJobs }: { initialJobs: ScanJob[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <Button variant="outline" className="rounded-2xl" onClick={() => void refreshJobs()} disabled={isRefreshing}>
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <ActivitySquare className="h-5 w-5 text-primary" />
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Lịch sử đồng bộ</h1>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">Mỗi job đồng bộ gắn với một mailbox.</p>
+        </div>
+        <Button variant="outline" className="h-10 rounded-xl px-4 md:shrink-0" onClick={() => void refreshJobs()} disabled={isRefreshing}>
           <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
           Làm mới
         </Button>
@@ -90,8 +97,8 @@ export function JobsClient({ initialJobs }: { initialJobs: ScanJob[] }) {
                 </div>
 
                 <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
-                  <div>{job.scannedCount} mail đã lấy</div>
-                  <div>{job.totalMessagesFound || 0} tham chiếu tìm thấy</div>
+                  <div>{job.scannedCount} mail đã lấy / </div>
+                  <div>{job.totalMessagesFound || 0} tìm thấy</div>
                 </div>
               </div>
 
@@ -134,3 +141,5 @@ export function JobsClient({ initialJobs }: { initialJobs: ScanJob[] }) {
     </div>
   );
 }
+
+

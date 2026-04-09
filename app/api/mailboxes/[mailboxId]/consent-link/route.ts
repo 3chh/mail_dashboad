@@ -9,7 +9,7 @@ export async function POST(_request: Request, context: { params: Promise<{ mailb
   const admin = await resolveAdminFromSessionUser(session?.user);
 
   if (!admin) {
-    return NextResponse.json({ error: "Kh?ng c? quy?n truy c?p." }, { status: 401 });
+    return NextResponse.json({ error: "Không có quyền truy cập." }, { status: 401 });
   }
 
   try {
@@ -21,7 +21,7 @@ export async function POST(_request: Request, context: { params: Promise<{ mailb
 
     return NextResponse.json(consent);
   } catch (error) {
-    const message = error instanceof Error && error.message === "MAILBOX_NOT_FOUND" ? "Kh?ng t?m th?y mailbox." : "Kh?ng t?o ???c URL consent.";
+    const message = error instanceof Error && error.message === "MAILBOX_NOT_FOUND" ? "Không tìm thấy mailbox." : "Không tạo được URL consent.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

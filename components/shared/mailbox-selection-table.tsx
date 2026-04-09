@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -72,13 +72,13 @@ export function MailboxSelectionTable({
         return "Hotmail / Outlook";
       case "ALL":
       default:
-        return "T?t c? nh? cung c?p";
+        return "Tất cả";
     }
   }
 
   function getGroupFilterLabel(value: string | null) {
     if (!value || value === "ALL") {
-      return "T?t c? nh?m";
+      return "All";
     }
 
     return availableGroups.find((group) => group.id === value)?.name ?? value;
@@ -184,47 +184,55 @@ export function MailboxSelectionTable({
       {selectedIds.map((mailboxId) => (
         <input key={mailboxId} type="hidden" name="mailboxId" value={mailboxId} />
       ))}
-
-      <div className="grid items-center gap-3 md:grid-cols-2 xl:grid-cols-[1.2fr_0.82fr_0.82fr_auto_auto]">
-        <Input
-          value={searchTerm}
-          onChange={(event) => setSearchTerm(event.target.value)}
-          placeholder="T?m theo email ho?c t?n hi?n th?"
-          className="h-10 rounded-xl"
-        />
-        <Select value={providerFilter} onValueChange={(value) => setProviderFilter(value as "ALL" | "GMAIL" | "OUTLOOK")}>
-          <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm">
-            <SelectValue>{(value) => getProviderFilterLabel(value as string | null)}</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">T?t c? nh? cung c?p</SelectItem>
-            <SelectItem value="GMAIL">Gmail</SelectItem>
-            <SelectItem value="OUTLOOK">Hotmail / Outlook</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={groupFilter} onValueChange={setGroupFilter}>
-          <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm">
-            <SelectValue>{(value) => getGroupFilterLabel(value as string | null)}</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">T?t c? nh?m</SelectItem>
-            {availableGroups.map((group) => (
-              <SelectItem key={group.id} value={group.id}>
-                {group.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="grid items-end gap-3 md:grid-cols-2 xl:grid-cols-[1.2fr_0.82fr_0.82fr_auto_auto]">
+        <div>
+          <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Tìm kiếm</div>
+          <Input
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder="Tìm theo email hoặc tên hiển thị"
+            className="h-10 rounded-xl"
+          />
+        </div>
+        <div>
+          <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Nhà cung cấp</div>
+          <Select value={providerFilter} onValueChange={(value) => setProviderFilter(value as "ALL" | "GMAIL" | "OUTLOOK")}>
+            <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm">
+              <SelectValue>{(value) => getProviderFilterLabel(value as string | null)}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Tất cả</SelectItem>
+              <SelectItem value="GMAIL">Gmail</SelectItem>
+              <SelectItem value="OUTLOOK">Hotmail / Outlook</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Nhóm</div>
+          <Select value={groupFilter} onValueChange={setGroupFilter}>
+            <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm">
+              <SelectValue>{(value) => getGroupFilterLabel(value as string | null)}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Tất cả</SelectItem>
+              {availableGroups.map((group) => (
+                <SelectItem key={group.id} value={group.id}>
+                  {group.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <Button type="button" variant="outline" className="h-10 rounded-xl px-3 whitespace-nowrap" onClick={selectAllVisible}>
-          Ch?n t?t c? ?ang hi?n th?
+          Chọn tất cả
         </Button>
         <Button type="button" variant="outline" className="h-10 rounded-xl px-3 whitespace-nowrap" onClick={clearSelection}>
-          B? ch?n
+          Bỏ chọn
         </Button>
       </div>
 
       <div className="text-sm text-muted-foreground">
-        {selectedIds.length} / {filteredMailboxes.length} Ä‘Ã£ chá»n
+        {selectedIds.length} / {filteredMailboxes.length} đã chọn
       </div>
 
       <div className="subpanel-surface rounded-[24px]">
@@ -234,12 +242,12 @@ export function MailboxSelectionTable({
               <TableHeader className="sticky top-0 z-10 bg-background/90 backdrop-blur-xl [&_tr]:border-b [&_th]:bg-background/90">
                 <TableRow>
                   <TableHead className="w-14 text-center">STT</TableHead>
-                  <TableHead className="w-16 text-center">Ch?n</TableHead>
+                  <TableHead className="w-16 text-center">Chọn</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>T?n hi?n th?</TableHead>
-                  <TableHead>Nh?m</TableHead>
-                  <TableHead>Nh? cung c?p</TableHead>
-                  <TableHead>L?n ??ng b? cu?i</TableHead>
+                  <TableHead>Tên hiển thị</TableHead>
+                  <TableHead>Nhóm</TableHead>
+                  <TableHead>Nhà cung cấp</TableHead>
+                  <TableHead>Last sync</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -281,3 +289,4 @@ export function MailboxSelectionTable({
     </div>
   );
 }
+
