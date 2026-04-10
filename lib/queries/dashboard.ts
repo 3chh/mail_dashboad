@@ -1,6 +1,7 @@
 import { subDays } from "date-fns";
 import { MailboxStatus } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
+import { compareMailboxesByStatusDisplayNameEmail } from "@/lib/utils";
 
 function dayKey(date: Date) {
   return date.toISOString().slice(0, 10);
@@ -242,18 +243,20 @@ export async function getDashboardData(adminUserId: string) {
         ).map(([date, value]) => ({ date, value })),
       ),
     },
-    mailboxes: mailboxes.map((mailbox) => ({
-      id: mailbox.id,
-      emailAddress: mailbox.emailAddress,
-      displayName: mailbox.displayName,
-      provider: mailbox.provider,
-      status: mailbox.status,
-      group: mailbox.group,
-      lastSyncedAt: mailbox.lastSyncedAt,
-      lastError: mailbox.lastError,
-      messageCount: mailbox._count.messages,
-      jobCount: mailbox._count.scanJobs,
-    })),
+    mailboxes: mailboxes
+      .map((mailbox) => ({
+        id: mailbox.id,
+        emailAddress: mailbox.emailAddress,
+        displayName: mailbox.displayName,
+        provider: mailbox.provider,
+        status: mailbox.status,
+        group: mailbox.group,
+        lastSyncedAt: mailbox.lastSyncedAt,
+        lastError: mailbox.lastError,
+        messageCount: mailbox._count.messages,
+        jobCount: mailbox._count.scanJobs,
+      }))
+      .sort(compareMailboxesByStatusDisplayNameEmail),
     recentActivity: [
       ...recentJobs.map((job) => ({
         id: job.id,

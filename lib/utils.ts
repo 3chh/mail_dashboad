@@ -1,7 +1,22 @@
+import type { MailboxStatus } from "@prisma/client";
 import { type ClassValue, clsx } from "clsx";
 import { formatDistanceToNowStrict } from "date-fns";
 import { vi } from "date-fns/locale";
 import { twMerge } from "tailwind-merge";
+
+const mailboxNameCollator = new Intl.Collator("vi-VN", {
+  sensitivity: "base",
+  numeric: true,
+});
+
+const mailboxStatusSortOrder: Record<MailboxStatus, number> = {
+  ACTIVE: 0,
+  PENDING_CONSENT: 1,
+  RECONNECT_REQUIRED: 2,
+  ERROR: 3,
+  DISABLED: 4,
+  DRAFT: 5,
+};
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -101,4 +116,35 @@ export function extractPostalCode(value: string | null | undefined) {
 
   const match = value.match(/\b(\d{3})-?(\d{4})\b/);
   return match ? `${match[1]}${match[2]}` : null;
+}
+
+export function compareMailboxesByStatusDisplayNameEmail<
+  T extends {
+    status: MailboxStatus;
+    displayName: string | null;
+    emailAddress: string;
+  },
+>(left: T, right: T) {
+  const statusDiff = mailboxStatusSortOrder[left.status] - mailboxStatusSortOrder[right.status];
+  if (statusDiff !== 0) {
+    return statusDiff;
+  }
+
+  const leftDisplayName = left.displayName?.trim() ?? "";
+  const rightDisplayName = right.displayName?.trim() ?? "";
+  const leftHasDisplayName = leftDisplayName.length > 0;
+  const rightHasDisplayName = rightDisplayName.length > 0;
+
+  if (leftHasDisplayName !== rightHasDisplayName) {
+    return leftHasDisplayName ? -1 : 1;
+  }
+
+  if (leftHasDisplayName && rightHasDisplayName) {
+    const displayNameDiff = mailboxNameCollator.compare(leftDisplayName, rightDisplayName);
+    if (displayNameDiff !== 0) {
+      return displayNameDiff;
+    }
+  }
+
+  return mailboxNameCollator.compare(left.emailAddress.trim().toLowerCase(), right.emailAddress.trim().toLowerCase());
 }

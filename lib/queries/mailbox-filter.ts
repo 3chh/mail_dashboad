@@ -1,6 +1,7 @@
 import { MailboxStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { parseRequiredKeywords } from "@/lib/mail/query";
+import { compareMailboxesByStatusDisplayNameEmail } from "@/lib/utils";
 
 type SearchParamValue = string | string[] | undefined;
 
@@ -41,6 +42,8 @@ export async function resolveMailboxSelection(adminUserId: string, requestedIds:
       },
     },
   });
+
+  mailboxes.sort(compareMailboxesByStatusDisplayNameEmail);
 
   const availableIds = new Set(mailboxes.map((mailbox) => mailbox.id));
   const selectedMailboxIds =
