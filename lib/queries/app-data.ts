@@ -308,7 +308,6 @@ export async function getScanJobsData(adminUserId: string) {
       mailbox: true,
     },
     orderBy: { createdAt: "desc" },
-    take: 120,
   });
 
   const groupedRuns = new Map<

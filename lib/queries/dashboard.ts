@@ -257,7 +257,6 @@ export async function getDashboardData(adminUserId: string) {
         savedCount: true,
       },
       orderBy: { createdAt: "desc" },
-      take: 24,
     }),
     prisma.otpDetection.findMany({
       where: {
