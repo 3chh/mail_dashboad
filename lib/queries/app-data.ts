@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db/prisma";
 import { extractOtpCandidates } from "@/lib/extractors/otp";
+import { fetchLatestMessageForMailbox } from "@/lib/mail/service";
 import {
   extractAddressLine,
   extractNumericSortValue,
@@ -11,6 +12,7 @@ import {
   type WarehouseLookupRow,
 } from "@/lib/mail/query";
 import { buildMessageWhereClause } from "@/lib/queries/mailbox-filter";
+import type { NormalizedMailMessage } from "@/types/domain";
 
 type FilterInput = {
   sender?: string;
@@ -70,28 +72,16 @@ function extractFromAddress(fromEmail: string | null, fromHeader: string | null)
   return fromHeader?.trim() || "N/A";
 }
 
-export async function getOtpMonitorData(mailboxIds: string[], filters: FilterInput & { quick?: string }) {
-  const todayFrom = new Date();
-  todayFrom.setHours(0, 0, 0, 0);
+function resolveOtpSourceText(message: NormalizedMailMessage) {
+  return (message.normalizedText || message.plainTextBody || message.snippet || "").trim();
+}
 
-  const effectiveDateFrom = filters.quick === "today" ? todayFrom.toISOString().slice(0, 10) : filters.dateFrom;
-  const effectiveUnreadOnly = filters.unreadOnly || filters.quick === "unread";
-  const effectiveLookbackDays = effectiveDateFrom ? undefined : filters.lookbackDays;
-
+export async function getOtpMonitorData(mailboxIds: string[]) {
   const mailboxes = await prisma.mailbox.findMany({
     where: {
       id: {
         in: mailboxIds,
       },
-    },
-    select: {
-      id: true,
-      emailAddress: true,
-      displayName: true,
-      provider: true,
-      status: true,
-      lastSyncedAt: true,
-      lastError: true,
     },
   });
 
@@ -99,44 +89,59 @@ export async function getOtpMonitorData(mailboxIds: string[], filters: FilterInp
 
   const results = await Promise.all(
     mailboxIds.map(async (mailboxId) => {
-      const message = await prisma.mailMessage.findFirst({
-        where: buildMessageWhereClause({
-          mailboxIds: [mailboxId],
-          sender: filters.sender,
-          dateFrom: effectiveDateFrom,
-          dateTo: filters.dateTo,
-          unreadOnly: effectiveUnreadOnly,
-          lookbackDays: effectiveLookbackDays,
-        }),
-        include: {
-          mailbox: true,
-        },
-        orderBy: [{ receivedAt: "desc" }, { createdAt: "desc" }],
-      });
+      const mailbox = mailboxById.get(mailboxId) ?? null;
 
-      if (!message) {
+      if (!mailbox) {
         return {
-          id: `${mailboxId}-empty`,
-          mailbox: mailboxById.get(mailboxId) ?? null,
+          id: `${mailboxId}-missing`,
+          mailbox: null,
           message: null,
           latestCandidate: null,
           candidateCount: 0,
+          errorMessage: "Mailbox không tồn tại hoặc không còn quyền truy cập.",
         };
       }
 
-      const candidates = extractOtpCandidates({
-        subject: message.subject,
-        bodyText: message.normalizedText ?? "",
-        fromHeader: message.fromHeader,
-      });
+      try {
+        const message = await fetchLatestMessageForMailbox({
+          mailbox,
+        });
 
-      return {
-        id: `${mailboxId}-${message.id}`,
-        mailbox: message.mailbox,
-        message,
-        latestCandidate: candidates[0] ?? null,
-        candidateCount: candidates.length,
-      };
+        if (!message) {
+          return {
+            id: `${mailboxId}-empty`,
+            mailbox,
+            message: null,
+            latestCandidate: null,
+            candidateCount: 0,
+            errorMessage: null,
+          };
+        }
+
+        const candidates = extractOtpCandidates({
+          subject: message.subject,
+          bodyText: resolveOtpSourceText(message),
+          fromHeader: message.fromHeader,
+        });
+
+        return {
+          id: `${mailboxId}-${message.remoteMessageId}`,
+          mailbox,
+          message,
+          latestCandidate: candidates[0] ?? null,
+          candidateCount: candidates.length,
+          errorMessage: null,
+        };
+      } catch (error) {
+        return {
+          id: `${mailboxId}-error`,
+          mailbox,
+          message: null,
+          latestCandidate: null,
+          candidateCount: 0,
+          errorMessage: error instanceof Error ? error.message : "Không thể lấy mail mới nhất từ provider.",
+        };
+      }
     }),
   );
 
@@ -156,8 +161,8 @@ export async function getOrdersData(mailboxIds: string[], filters: FilterInput &
       }),
       merchantName: filters.merchant
         ? {
-            contains: filters.merchant,
-          }
+          contains: filters.merchant,
+        }
         : undefined,
     },
     include: {
@@ -176,8 +181,8 @@ async function loadWarehousesForSearch(adminUserId?: string): Promise<WarehouseL
   const warehouses = await prisma.warehouse.findMany({
     where: adminUserId
       ? {
-          OR: [{ createdById: adminUserId }, { createdById: null }],
-        }
+        OR: [{ createdById: adminUserId }, { createdById: null }],
+      }
       : undefined,
     orderBy: [{ name: "asc" }],
     select: {
@@ -257,10 +262,10 @@ export async function searchMailToolResults(mailboxIds: string[], filters: Searc
         mode === "order"
           ? resolveWarehouseMatch(body, warehouses)
           : {
-              address: extractAddressLine(body),
-              warehouse: "N/A",
-              score: 0,
-            };
+            address: extractAddressLine(body),
+            warehouse: "N/A",
+            score: 0,
+          };
 
       const result: MailToolSearchResult = {
         id: `${message.mailbox.id}-${message.id}`,
@@ -371,7 +376,7 @@ export async function getMessageDetailData(messageId: string) {
   });
 
   if (!message) {
-    throw new Error("Kh?ng t?m th?y email.");
+    throw new Error("Không tìm thấy email.");
   }
 
   const [otpDetections, orderExtraction] = await Promise.all([

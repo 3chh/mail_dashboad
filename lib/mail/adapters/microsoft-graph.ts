@@ -205,16 +205,18 @@ async function graphFetch(mailbox: Mailbox, path: string) {
 
 export async function listMicrosoftMessageRefs(args: {
   mailbox: Mailbox;
-  lookbackDays: number;
+  lookbackDays?: number;
   maxResults: number;
 }) {
-  const since = new Date(Date.now() - args.lookbackDays * 24 * 60 * 60 * 1000).toISOString();
   const params = new URLSearchParams({
     "$top": String(args.maxResults),
     "$orderby": "receivedDateTime desc",
-    "$filter": `receivedDateTime ge ${since}`,
     "$select": "id,conversationId",
   });
+  if (typeof args.lookbackDays === "number") {
+    const since = new Date(Date.now() - args.lookbackDays * 24 * 60 * 60 * 1000).toISOString();
+    params.set("$filter", `receivedDateTime ge ${since}`);
+  }
   const payload = (await graphFetch(
     args.mailbox,
     `/me/messages?${params.toString()}`,

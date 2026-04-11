@@ -1,17 +1,13 @@
-﻿import Link from "next/link";
-import { Filter, MailOpen, ShieldCheck } from "lucide-react";
+import { MailOpen, ShieldCheck, Wifi } from "lucide-react";
 import { getRequiredAdmin } from "@/lib/auth/get-session";
 import { CopyOtpButton } from "@/components/otp/copy-otp-button";
 import { ConfidenceBadge } from "@/components/shared/confidence-badge";
 import { MailboxSelectionTable } from "@/components/shared/mailbox-selection-table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { parseLookbackDays } from "@/lib/mail/query";
 import { getOtpMonitorData } from "@/lib/queries/app-data";
 import { parseMultiValueParam, resolveMailboxSelection } from "@/lib/queries/mailbox-filter";
-import { formatDateTime, parseLabelList, truncate } from "@/lib/utils";
+import { formatDateTime, truncate } from "@/lib/utils";
 
 type OtpPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -21,29 +17,18 @@ export default async function OtpPage({ searchParams }: OtpPageProps) {
   const admin = await getRequiredAdmin();
   const params = await searchParams;
 
-  const sender = typeof params.sender === "string" ? params.sender : undefined;
-  const unreadOnly = params.unreadOnly === "true";
-  const lookbackDays = parseLookbackDays(typeof params.lookbackDays === "string" ? params.lookbackDays : undefined, 30);
-
   const selection = await resolveMailboxSelection(admin.id, parseMultiValueParam(params.mailboxId));
   const activeMailboxes = selection.mailboxes.filter((mailbox) => mailbox.status === "ACTIVE");
   const activeMailboxIds = new Set(activeMailboxes.map((mailbox) => mailbox.id));
   const selectedMailboxIds = selection.selectedMailboxIds.filter((mailboxId) => activeMailboxIds.has(mailboxId));
 
-  const results =
-    selectedMailboxIds.length > 0
-      ? await getOtpMonitorData(selectedMailboxIds, {
-        sender,
-        unreadOnly,
-        lookbackDays,
-      })
-      : [];
+  const results = selectedMailboxIds.length > 0 ? await getOtpMonitorData(selectedMailboxIds) : [];
 
   return (
     <div className="space-y-4">
       <Card className="rounded-[28px] bg-card/88">
         <CardHeader>
-          <CardTitle>Lấy OTP</CardTitle>
+          <CardTitle>Lấy OTP từ mail</CardTitle>
         </CardHeader>
         <CardContent>
           <form className="grid gap-3">
@@ -53,54 +38,16 @@ export default async function OtpPage({ searchParams }: OtpPageProps) {
                 lastSyncedAt: mailbox.lastSyncedAt?.toISOString() ?? null,
               }))}
               selectedMailboxIds={selectedMailboxIds}
+              action={(
+                <button
+                  type="submit"
+                  className="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground shadow-[0_18px_38px_-24px_rgba(44,143,153,0.42)] transition hover:brightness-105"
+                >
+                  <Wifi className="mr-2 h-4 w-4" />
+                  Lấy OTP
+                </button>
+              )}
             />
-
-            <div className="grid gap-3">
-              <div className="grid items-end gap-3 md:grid-cols-2 xl:grid-cols-[1.2fr_8.5rem_auto_auto]">
-                <div>
-                  <div className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Người gửi</div>
-                  <Input name="sender" defaultValue={sender} placeholder="Người gửi" className="h-10 rounded-xl" />
-                </div>
-                <div>
-                  <div className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Khoảng ngày</div>
-                  <Select name="lookbackDays" defaultValue={String(lookbackDays)}>
-                    <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1 ngày</SelectItem>
-                      <SelectItem value="7">7 ngày</SelectItem>
-                      <SelectItem value="30">30 ngày</SelectItem>
-                      <SelectItem value="90">90 ngày</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <div className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-transparent">.</div>
-                  <button
-                    type="submit"
-                    className="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground shadow-[0_18px_38px_-24px_rgba(44,143,153,0.42)] transition hover:brightness-105"
-                  >
-                    <ShieldCheck className="mr-2 h-4 w-4" />
-                    Lấy OTP mới nhất
-                  </button>
-                </div>
-                <div>
-                  <div className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-transparent">.</div>
-                  <Link href="/otp" className="control-surface inline-flex h-10 items-center justify-center rounded-xl px-4 text-sm font-medium text-foreground">
-                    <Filter className="mr-2 h-4 w-4" />
-                    Đặt lại bộ lọc
-                  </Link>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-6">
-                <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-                  <input type="checkbox" name="unreadOnly" value="true" defaultChecked={unreadOnly} />
-                  Chỉ xét mail chưa đọc
-                </label>
-              </div>
-            </div>
           </form>
         </CardContent>
       </Card>
@@ -118,7 +65,7 @@ export default async function OtpPage({ searchParams }: OtpPageProps) {
       ) : (
         <div className="space-y-3">
           {results.map((result) => {
-            const labels = parseLabelList(result.message?.labels);
+            const labels = result.message?.labels ?? [];
             const candidate = result.latestCandidate;
 
             return (
@@ -128,40 +75,42 @@ export default async function OtpPage({ searchParams }: OtpPageProps) {
                     <div className="space-y-2">
                       <div className="flex flex-wrap items-center gap-3">
                         <Badge variant="outline">{result.mailbox?.emailAddress ?? "Mailbox không xác định"}</Badge>
-                        {candidate ? <Badge className="semantic-brand rounded-full border hover:brightness-105">{candidate.code}</Badge> : null}
                         {candidate ? <ConfidenceBadge value={candidate.confidenceLabel} /> : null}
+                        {result.errorMessage ? <Badge variant="destructive">Lỗi fetch live mail</Badge> : null}
                         {labels.includes("UNREAD") ? <Badge variant="outline">Chưa đọc</Badge> : null}
-                        {!result.message ? <Badge variant="outline">Chưa có mail đã đồng bộ</Badge> : null}
+                        {!result.message && !result.errorMessage ? <Badge variant="outline">Mailbox chưa có mail</Badge> : null}
                         {result.message && !candidate ? <Badge variant="outline">Mail mới nhất không có OTP</Badge> : null}
                       </div>
                       <div>
-                        <p className="text-lg font-semibold">{result.message?.subject ?? "Chưa có mail cục bộ"}</p>
+                        <p className="text-lg font-semibold">{result.message?.subject ?? "Chưa lấy được mail mới nhất"}</p>
                         <p className="text-sm text-muted-foreground">{result.message?.fromHeader || result.mailbox?.displayName || "Không rõ người gửi"}</p>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2">
-                      {candidate ? <CopyOtpButton code={candidate.code} /> : null}
-                      {result.message ? (
-                        <Link href={`/messages/${result.message.id}`} className="control-surface rounded-xl px-3 py-2 text-sm font-medium text-foreground">
-                          Mở email
-                        </Link>
+                      {candidate ? (
+                        <span className="rounded-xl border border-border/60 bg-background/70 px-3 py-2 font-mono text-sm font-semibold text-foreground">
+                          {candidate.code}
+                        </span>
                       ) : null}
+                      {candidate ? <CopyOtpButton code={candidate.code} /> : null}
                     </div>
                   </div>
 
                   <div className="grid gap-4 xl:grid-cols-[1fr_auto]">
                     <div>
                       <p className="text-sm leading-7 text-muted-foreground">
-                        {candidate
-                          ? truncate(candidate.contextSnippet, 260)
-                          : result.message
-                            ? "Đã tìm thấy mail mới nhất, nhưng extractor không phát hiện mã OTP hợp lệ trong nội dung mail này."
-                            : "Mailbox này chưa có mail cục bộ phù hợp với bộ lọc hiện tại. Hãy dùng bộ lọc trước rồi bấm Lấy OTP mới nhất lại."}
+                        {result.errorMessage
+                          ? result.errorMessage
+                          : candidate
+                            ? truncate(candidate.contextSnippet, 260)
+                            : result.message
+                              ? "Đã fetch mail mới nhất, nhưng không tìm thấy OTP hợp lệ trong mail này."
+                              : "Mailbox này chưa có mail nào để đọc trực tiếp từ provider."}
                       </p>
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      <div>{formatDateTime(result.message?.receivedAt ?? result.mailbox?.lastSyncedAt)}</div>
+                      <div>{formatDateTime(result.message?.receivedAt)}</div>
                       {candidate ? (
                         <div className="mt-2 flex items-center gap-2">
                           <ShieldCheck className="h-4 w-4" />
@@ -179,6 +128,3 @@ export default async function OtpPage({ searchParams }: OtpPageProps) {
     </div>
   );
 }
-
-
-

@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,9 +31,11 @@ function normalizeMailboxSearch(value: string) {
 export function MailboxSelectionTable({
   mailboxes,
   selectedMailboxIds,
+  action,
 }: {
   mailboxes: MailboxRow[];
   selectedMailboxIds: string[];
+  action?: ReactNode;
 }) {
   const [selectedIds, setSelectedIds] = useState<string[]>(selectedMailboxIds);
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
@@ -184,7 +187,7 @@ export function MailboxSelectionTable({
       {selectedIds.map((mailboxId) => (
         <input key={mailboxId} type="hidden" name="mailboxId" value={mailboxId} />
       ))}
-      <div className="grid items-end gap-3 md:grid-cols-2 xl:grid-cols-[1.2fr_0.82fr_0.82fr_auto_auto]">
+      <div className="grid items-end gap-3 md:grid-cols-2 xl:grid-cols-[minmax(15rem,1fr)_10rem_10rem_auto_auto_auto]">
         <div>
           <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Tìm kiếm</div>
           <Input
@@ -229,6 +232,7 @@ export function MailboxSelectionTable({
         <Button type="button" variant="outline" className="h-10 rounded-xl px-3 whitespace-nowrap" onClick={clearSelection}>
           Bỏ chọn
         </Button>
+        {action ? <div className="flex items-center justify-end">{action}</div> : null}
       </div>
 
       <div className="text-sm text-muted-foreground">

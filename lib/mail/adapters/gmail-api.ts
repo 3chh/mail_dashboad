@@ -112,13 +112,13 @@ async function getGmailClient(mailbox: Mailbox) {
 
 export async function listGmailMessageRefs(args: {
   mailbox: Mailbox;
-  lookbackDays: number;
+  lookbackDays?: number;
   maxResults: number;
 }) {
   const gmail = await getGmailClient(args.mailbox);
   const response = await gmail.users.messages.list({
     userId: "me",
-    q: `newer_than:${args.lookbackDays}d`,
+    q: typeof args.lookbackDays === "number" ? `newer_than:${args.lookbackDays}d` : undefined,
     maxResults: args.maxResults,
   });
 

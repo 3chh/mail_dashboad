@@ -67,7 +67,7 @@ export async function listActiveMailboxIds(adminUserId: string) {
 
 export async function listMessageRefsForMailbox(args: {
   mailbox: ManagedMailbox;
-  lookbackDays: number;
+  lookbackDays?: number;
   maxResults: number;
 }) {
   if (args.mailbox.provider === MailProvider.GMAIL) {
@@ -86,6 +86,25 @@ export async function fetchAndParseMessage(args: {
   }
 
   return getMicrosoftMessage(args);
+}
+
+export async function fetchLatestMessageForMailbox(args: {
+  mailbox: ManagedMailbox;
+}) {
+  const result = await listMessageRefsForMailbox({
+    mailbox: args.mailbox,
+    maxResults: 1,
+  });
+  const latestMessageId = result.refs.find((ref) => ref.remoteId)?.remoteId;
+
+  if (!latestMessageId) {
+    return null;
+  }
+
+  return fetchAndParseMessage({
+    mailbox: args.mailbox,
+    remoteMessageId: latestMessageId,
+  });
 }
 
 export async function upsertParsedMessage(args: {
