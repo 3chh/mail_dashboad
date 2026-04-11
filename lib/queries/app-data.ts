@@ -1,3 +1,4 @@
+import type { ScanJobStatus } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { extractOtpCandidates } from "@/lib/extractors/otp";
 import { fetchLatestMessageForMailbox } from "@/lib/mail/service";
@@ -299,20 +300,158 @@ export async function searchMailToolResults(mailboxIds: string[], filters: Searc
 }
 
 export async function getScanJobsData(adminUserId: string) {
-  return prisma.scanJob.findMany({
+  const jobs = await prisma.scanJob.findMany({
     where: {
       OR: [{ adminUserId }, { adminUserId: null }],
     },
     include: {
       mailbox: true,
-      logs: {
-        orderBy: { createdAt: "desc" },
-        take: 3,
-      },
     },
     orderBy: { createdAt: "desc" },
-    take: 30,
+    take: 120,
   });
+
+  const groupedRuns = new Map<
+    string,
+    {
+      id: string;
+      batchId: string | null;
+      jobName: string | null;
+      status: ScanJobStatus;
+      createdAt: Date;
+      startedAt: Date | null;
+      completedAt: Date | null;
+      totalMailboxCount: number;
+      completedMailboxCount: number;
+      successMailboxCount: number;
+      failedMailboxCount: number;
+      totalSavedCount: number;
+      jobs: Array<{
+        id: string;
+        status: ScanJobStatus;
+        scannedCount: number;
+        savedCount: number;
+        totalMessagesFound: number;
+        errorMessage: string | null;
+        createdAt: Date;
+        completedAt: Date | null;
+        mailbox: {
+          id: string;
+          emailAddress: string;
+          provider: "GMAIL" | "OUTLOOK";
+        };
+      }>;
+    }
+  >();
+
+  for (const job of jobs) {
+    const groupKey = job.batchId ?? job.id;
+    const current = groupedRuns.get(groupKey);
+    const mailboxJob = {
+      id: job.id,
+      status: job.status,
+      scannedCount: job.scannedCount,
+      savedCount: job.savedCount,
+      totalMessagesFound: job.totalMessagesFound,
+      errorMessage: job.errorMessage,
+      createdAt: job.createdAt,
+      completedAt: job.completedAt,
+      mailbox: {
+        id: job.mailbox.id,
+        emailAddress: job.mailbox.emailAddress,
+        provider: job.mailbox.provider,
+      },
+    };
+
+    if (!current) {
+      groupedRuns.set(groupKey, {
+        id: groupKey,
+        batchId: job.batchId,
+        jobName: job.jobName,
+        status: job.status,
+        createdAt: job.createdAt,
+        startedAt: job.startedAt,
+        completedAt: job.completedAt,
+        totalMailboxCount: 1,
+        completedMailboxCount: job.status === "COMPLETED" || job.status === "FAILED" ? 1 : 0,
+        successMailboxCount: job.status === "COMPLETED" ? 1 : 0,
+        failedMailboxCount: job.status === "FAILED" ? 1 : 0,
+        totalSavedCount: job.savedCount,
+        jobs: [mailboxJob],
+      });
+      continue;
+    }
+
+    current.createdAt = current.createdAt.getTime() > job.createdAt.getTime() ? job.createdAt : current.createdAt;
+    current.startedAt =
+      !current.startedAt || (job.startedAt && job.startedAt.getTime() < current.startedAt.getTime()) ? (job.startedAt ?? current.startedAt) : current.startedAt;
+    current.completedAt =
+      !current.completedAt || (job.completedAt && job.completedAt.getTime() > current.completedAt.getTime()) ? (job.completedAt ?? current.completedAt) : current.completedAt;
+    current.totalMailboxCount += 1;
+    current.completedMailboxCount += job.status === "COMPLETED" || job.status === "FAILED" ? 1 : 0;
+    current.successMailboxCount += job.status === "COMPLETED" ? 1 : 0;
+    current.failedMailboxCount += job.status === "FAILED" ? 1 : 0;
+    current.totalSavedCount += job.savedCount;
+    current.jobs.push(mailboxJob);
+  }
+
+  return [...groupedRuns.values()]
+    .map((run) => ({
+      ...run,
+      status: deriveBatchStatus(run.jobs.map((job) => job.status)),
+      jobs: run.jobs.sort((left, right) => left.mailbox.emailAddress.localeCompare(right.mailbox.emailAddress)),
+      logs: buildBatchLogs(run),
+    }))
+    .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
+    .slice(0, 30);
+}
+
+function deriveBatchStatus(statuses: ScanJobStatus[]): ScanJobStatus {
+  if (statuses.some((status) => status === "RUNNING")) {
+    return "RUNNING";
+  }
+
+  if (statuses.some((status) => status === "QUEUED")) {
+    return "QUEUED";
+  }
+
+  if (statuses.some((status) => status === "FAILED")) {
+    return "FAILED";
+  }
+
+  return "COMPLETED";
+}
+
+function buildBatchLogs(run: {
+  id: string;
+  status: ScanJobStatus;
+  createdAt: Date;
+  startedAt: Date | null;
+  completedAt: Date | null;
+  totalMailboxCount: number;
+  successMailboxCount: number;
+  failedMailboxCount: number;
+  totalSavedCount: number;
+}) {
+  const logs = [
+    {
+      id: `${run.id}-start`,
+      level: "info",
+      message: `Bat dau dong bo ${run.totalMailboxCount} email.`,
+      createdAt: run.startedAt ?? run.createdAt,
+    },
+  ];
+
+  if (run.status === "COMPLETED" || run.status === "FAILED") {
+    logs.push({
+      id: `${run.id}-end`,
+      level: run.status === "FAILED" ? "error" : "info",
+      message: `Ket thuc dong bo. Thanh cong ${run.successMailboxCount} email, loi ${run.failedMailboxCount} email, da luu ${run.totalSavedCount} mail.`,
+      createdAt: run.completedAt ?? run.createdAt,
+    });
+  }
+
+  return logs.sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
 }
 
 export async function getSettingsData(adminUserId: string) {

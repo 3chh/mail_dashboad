@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getServerSession } from "next-auth";
-import { MailboxStatus } from "@prisma/client";
+import { MailboxStatus, ScanJobStatus } from "@prisma/client";
 import { authOptions } from "@/lib/auth/auth-options";
 import { resolveAdminFromSessionUser } from "@/lib/auth/admin";
 import { createAndEnqueueScanJobs } from "@/lib/jobs/scan-runner";
@@ -72,4 +72,24 @@ export async function POST(request: Request) {
   });
 
   return NextResponse.json({ jobIds: jobs.map((job) => job.id) }, { status: 201 });
+}
+
+export async function DELETE() {
+  const session = await getServerSession(authOptions);
+  const admin = await resolveAdminFromSessionUser(session?.user);
+
+  if (!admin) {
+    return NextResponse.json({ error: "Không có quyền truy cập." }, { status: 401 });
+  }
+
+  const result = await prisma.scanJob.deleteMany({
+    where: {
+      status: {
+        in: [ScanJobStatus.COMPLETED, ScanJobStatus.FAILED],
+      },
+      OR: [{ adminUserId: admin.id }, { adminUserId: null }],
+    },
+  });
+
+  return NextResponse.json({ deletedCount: result.count });
 }

@@ -257,10 +257,13 @@ export async function createAndEnqueueScanJobs(args: {
   mailboxIds: string[];
   syncWindowDays: number;
 }) {
+  const batchId = crypto.randomUUID();
+
   const jobs = await prisma.$transaction(
     args.mailboxIds.map((mailboxId) =>
       prisma.scanJob.create({
         data: {
+          batchId,
           adminUserId: args.adminUserId || null,
           mailboxId,
           status: ScanJobStatus.QUEUED,

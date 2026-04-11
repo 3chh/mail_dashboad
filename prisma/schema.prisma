@@ -133,6 +133,7 @@ model MailboxOAuthState {
 
 model ScanJob {
   id                    String         @id @default(cuid())
+  batchId               String?
   adminUserId           String?
   mailboxId             String
   status                ScanJobStatus  @default(QUEUED)
@@ -154,6 +155,7 @@ model ScanJob {
   messages              MailMessage[]  @relation("LastScanJobMessages")
   logs                  ExtractionLog[]
 
+  @@index([batchId, createdAt(sort: Desc)])
   @@index([mailboxId, createdAt(sort: Desc)])
   @@index([status])
 }

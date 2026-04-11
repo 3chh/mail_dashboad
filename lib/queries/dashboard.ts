@@ -1,5 +1,5 @@
 import { subDays } from "date-fns";
-import { MailboxStatus } from "@prisma/client";
+import { MailboxStatus, ScanJobStatus } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { compareMailboxesByStatusDisplayNameEmail } from "@/lib/utils";
 
@@ -21,6 +21,144 @@ function fillDailySeries(records: Array<{ date: string; value: number }>, days =
   }
 
   return series;
+}
+
+function deriveBatchStatus(statuses: ScanJobStatus[]) {
+  if (statuses.some((status) => status === "RUNNING")) {
+    return "RUNNING";
+  }
+
+  if (statuses.some((status) => status === "QUEUED")) {
+    return "QUEUED";
+  }
+
+  if (statuses.some((status) => status === "FAILED")) {
+    return "FAILED";
+  }
+
+  return "COMPLETED";
+}
+
+function formatRecentSyncTitle(run: {
+  status: ScanJobStatus;
+  totalSavedCount: number;
+  completedMailboxCount: number;
+  totalMailboxCount: number;
+}) {
+  if (run.status === "RUNNING") {
+    return `Đang đồng bộ ${run.completedMailboxCount}/${run.totalMailboxCount} mailbox`;
+  }
+
+  if (run.status === "QUEUED") {
+    return `Đã xếp lịch đồng bộ ${run.totalMailboxCount} mailbox`;
+  }
+
+  if (run.status === "COMPLETED") {
+    return `Đồng bộ thành công ${run.totalSavedCount} email`;
+  }
+
+  return `Đồng bộ hoàn tất ${run.totalSavedCount} email`;
+}
+
+function formatRecentSyncDescription(run: {
+  jobName: string | null;
+  completedMailboxCount: number;
+  totalMailboxCount: number;
+  successMailboxCount: number;
+  failedMailboxCount: number;
+}) {
+  const jobLabel = run.jobName ?? "Lượt đồng bộ";
+
+  if (run.completedMailboxCount < run.totalMailboxCount) {
+    return `${jobLabel} - ${run.completedMailboxCount}/${run.totalMailboxCount} mailbox đã xong`;
+  }
+
+  if (run.failedMailboxCount > 0) {
+    return `${jobLabel} - ${run.successMailboxCount} thành công, ${run.failedMailboxCount} lỗi`;
+  }
+
+  return `${jobLabel} - ${run.successMailboxCount}/${run.totalMailboxCount} mailbox thành công`;
+}
+
+function buildRecentSyncActivity(
+  jobs: Array<{
+    id: string;
+    batchId: string | null;
+    jobName: string | null;
+    status: ScanJobStatus;
+    createdAt: Date;
+    completedAt: Date | null;
+    savedCount: number;
+  }>,
+) {
+  const groupedRuns = new Map<
+    string,
+    {
+      id: string;
+      batchId: string | null;
+      jobName: string | null;
+      createdAt: Date;
+      completedAt: Date | null;
+      totalMailboxCount: number;
+      completedMailboxCount: number;
+      successMailboxCount: number;
+      failedMailboxCount: number;
+      totalSavedCount: number;
+      statuses: ScanJobStatus[];
+    }
+  >();
+
+  for (const job of jobs) {
+    const groupKey = job.batchId ?? job.id;
+    const current = groupedRuns.get(groupKey);
+
+    if (!current) {
+      groupedRuns.set(groupKey, {
+        id: groupKey,
+        batchId: job.batchId,
+        jobName: job.jobName,
+        createdAt: job.createdAt,
+        completedAt: job.completedAt,
+        totalMailboxCount: 1,
+        completedMailboxCount: job.status === "COMPLETED" || job.status === "FAILED" ? 1 : 0,
+        successMailboxCount: job.status === "COMPLETED" ? 1 : 0,
+        failedMailboxCount: job.status === "FAILED" ? 1 : 0,
+        totalSavedCount: job.savedCount,
+        statuses: [job.status],
+      });
+      continue;
+    }
+
+    current.createdAt = current.createdAt.getTime() > job.createdAt.getTime() ? job.createdAt : current.createdAt;
+    current.completedAt =
+      !current.completedAt || (job.completedAt && job.completedAt.getTime() > current.completedAt.getTime()) ? (job.completedAt ?? current.completedAt) : current.completedAt;
+    current.totalMailboxCount += 1;
+    current.completedMailboxCount += job.status === "COMPLETED" || job.status === "FAILED" ? 1 : 0;
+    current.successMailboxCount += job.status === "COMPLETED" ? 1 : 0;
+    current.failedMailboxCount += job.status === "FAILED" ? 1 : 0;
+    current.totalSavedCount += job.savedCount;
+    current.statuses.push(job.status);
+  }
+
+  return [...groupedRuns.values()]
+    .map((run) => {
+      const status = deriveBatchStatus(run.statuses);
+
+      return {
+        id: run.id,
+        type: "sync" as const,
+        title: formatRecentSyncTitle({
+          status,
+          totalSavedCount: run.totalSavedCount,
+          completedMailboxCount: run.completedMailboxCount,
+          totalMailboxCount: run.totalMailboxCount,
+        }),
+        description: formatRecentSyncDescription(run),
+        timestamp: run.completedAt ?? run.createdAt,
+      };
+    })
+    .sort((left, right) => right.timestamp.getTime() - left.timestamp.getTime())
+    .slice(0, 6);
 }
 
 export async function getDashboardData(adminUserId: string) {
@@ -109,11 +247,17 @@ export async function getDashboardData(adminUserId: string) {
       where: {
         mailbox: mailboxWhere,
       },
-      include: {
-        mailbox: true,
+      select: {
+        id: true,
+        batchId: true,
+        jobName: true,
+        status: true,
+        createdAt: true,
+        completedAt: true,
+        savedCount: true,
       },
       orderBy: { createdAt: "desc" },
-      take: 6,
+      take: 24,
     }),
     prisma.otpDetection.findMany({
       where: {
@@ -258,13 +402,7 @@ export async function getDashboardData(adminUserId: string) {
       }))
       .sort(compareMailboxesByStatusDisplayNameEmail),
     recentActivity: [
-      ...recentJobs.map((job) => ({
-        id: job.id,
-        type: "sync" as const,
-        title: job.mailbox.emailAddress,
-        description: `${job.status} - ${job.scannedCount}/${job.totalMessagesFound || job.scannedCount}`,
-        timestamp: job.createdAt,
-      })),
+      ...buildRecentSyncActivity(recentJobs),
       ...recentOtps.map((otp) => ({
         id: otp.id,
         type: "otp" as const,
