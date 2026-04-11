@@ -436,7 +436,7 @@ function buildBatchLogs(run: {
     {
       id: `${run.id}-start`,
       level: "info",
-      message: `Bat dau dong bo ${run.totalMailboxCount} email.`,
+      message: `Bắt đầu đồng bộ ${run.totalMailboxCount} email.`,
       createdAt: run.startedAt ?? run.createdAt,
     },
   ];
@@ -445,7 +445,7 @@ function buildBatchLogs(run: {
     logs.push({
       id: `${run.id}-end`,
       level: run.status === "FAILED" ? "error" : "info",
-      message: `Ket thuc dong bo. Thanh cong ${run.successMailboxCount} email, loi ${run.failedMailboxCount} email, da luu ${run.totalSavedCount} mail.`,
+      message: `Kết thúc đồng bộ. ${run.successMailboxCount} email thành công, ${run.failedMailboxCount} email lỗi, ${run.totalSavedCount} mail đã được lưu.`,
       createdAt: run.completedAt ?? run.createdAt,
     });
   }

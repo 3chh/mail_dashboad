@@ -1,10 +1,9 @@
-﻿"use client";
+"use client";
 
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ProviderBadge } from "@/components/shared/provider-badge";
@@ -183,11 +182,13 @@ export function MailboxSelectionTable({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="min-w-0 space-y-3">
       {selectedIds.map((mailboxId) => (
         <input key={mailboxId} type="hidden" name="mailboxId" value={mailboxId} />
       ))}
-      <div className="grid items-end gap-3 md:grid-cols-2 xl:grid-cols-[minmax(15rem,1fr)_10rem_10rem_auto_auto_auto]">
+      {/* Filters: stack on mobile, 2-col on sm, single row on xl */}
+      <div className="grid gap-2">
+        {/* Search input: always full width */}
         <div>
           <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Tìm kiếm</div>
           <Input
@@ -197,56 +198,66 @@ export function MailboxSelectionTable({
             className="h-10 rounded-xl"
           />
         </div>
-        <div>
-          <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Nhà cung cấp</div>
-        <Select value={providerFilter} onValueChange={(value) => setProviderFilter((value ?? "ALL") as "ALL" | "GMAIL" | "OUTLOOK")}>
-            <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm">
-              <SelectValue>{(value) => getProviderFilterLabel(value as string | null)}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">Tất cả</SelectItem>
-              <SelectItem value="GMAIL">Gmail</SelectItem>
-              <SelectItem value="OUTLOOK">Hotmail / Outlook</SelectItem>
-            </SelectContent>
-          </Select>
+        {/* Provider + Group: side by side on all screens */}
+        <div className="grid grid-cols-2 gap-2 xl:flex xl:gap-3">
+          <div className="xl:min-w-[130px] xl:flex-[0_1_160px]">
+            <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Nhà cung cấp</div>
+            <Select value={providerFilter} onValueChange={(value) => setProviderFilter((value ?? "ALL") as "ALL" | "GMAIL" | "OUTLOOK")}>
+              <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm">
+                <SelectValue>{(value) => getProviderFilterLabel(value as string | null)}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">Tất cả</SelectItem>
+                <SelectItem value="GMAIL">Gmail</SelectItem>
+                <SelectItem value="OUTLOOK">Hotmail / Outlook</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="xl:min-w-[110px] xl:flex-[0_1_140px]">
+            <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Nhóm</div>
+            <Select value={groupFilter} onValueChange={(value) => setGroupFilter(value ?? "ALL")}>
+              <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm">
+                <SelectValue>{(value) => getGroupFilterLabel(value as string | null)}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">Tất cả</SelectItem>
+                {availableGroups.map((group) => (
+                  <SelectItem key={group.id} value={group.id}>
+                    {group.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <div>
-          <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Nhóm</div>
-        <Select value={groupFilter} onValueChange={(value) => setGroupFilter(value ?? "ALL")}>
-            <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm">
-              <SelectValue>{(value) => getGroupFilterLabel(value as string | null)}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">Tất cả</SelectItem>
-              {availableGroups.map((group) => (
-                <SelectItem key={group.id} value={group.id}>
-                  {group.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* Action buttons: always side by side, full width split equally */}
+        <div className="grid grid-cols-2 gap-2">
+          <Button type="button" variant="outline" className="h-10 rounded-xl px-3" onClick={selectAllVisible}>
+            Chọn tất cả
+          </Button>
+          <Button type="button" variant="outline" className="h-10 rounded-xl px-3" onClick={clearSelection}>
+            Bỏ chọn
+          </Button>
         </div>
-        <Button type="button" variant="outline" className="h-10 rounded-xl px-3 whitespace-nowrap" onClick={selectAllVisible}>
-          Chọn tất cả
-        </Button>
-        <Button type="button" variant="outline" className="h-10 rounded-xl px-3 whitespace-nowrap" onClick={clearSelection}>
-          Bỏ chọn
-        </Button>
-        {action ? <div className="flex items-center justify-end">{action}</div> : null}
+        {/* Action slot (e.g. Lấy OTP button): full width */}
+        {action ? (
+          <div>{action}</div>
+        ) : null}
       </div>
 
       <div className="text-sm text-muted-foreground">
         {selectedIds.length} / {filteredMailboxes.length} đã chọn
       </div>
 
-      <div className="subpanel-surface rounded-[24px]">
-        <ScrollArea className="h-[360px] rounded-[24px]">
-          <div className="min-w-[960px] select-none">
+      {/* Table: outer clips width, inner scrolls both axes */}
+      <div className="subpanel-surface overflow-hidden rounded-[24px]">
+        <div className="h-[360px] overflow-auto">
+          <div className="min-w-[640px] select-none">
             <Table>
               <TableHeader className="sticky top-0 z-10 bg-background/90 backdrop-blur-xl [&_tr]:border-b [&_th]:bg-background/90">
                 <TableRow>
-                  <TableHead className="w-14 text-center">STT</TableHead>
-                  <TableHead className="w-16 text-center">Chọn</TableHead>
+                  <TableHead className="w-12 text-center">STT</TableHead>
+                  <TableHead className="w-14 text-center">Chọn</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Tên hiển thị</TableHead>
                   <TableHead>Nhóm</TableHead>
@@ -288,7 +299,7 @@ export function MailboxSelectionTable({
               </TableBody>
             </Table>
           </div>
-        </ScrollArea>
+        </div>
       </div>
     </div>
   );

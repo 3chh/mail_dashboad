@@ -26,7 +26,7 @@ export default async function OtpPage({ searchParams }: OtpPageProps) {
 
   return (
     <div className="space-y-4">
-      <Card className="rounded-[28px] bg-card/88">
+      <Card className="rounded-[28px] bg-card/88 !overflow-visible">
         <CardHeader>
           <CardTitle>Lấy OTP từ mail</CardTitle>
         </CardHeader>
@@ -41,7 +41,7 @@ export default async function OtpPage({ searchParams }: OtpPageProps) {
               action={(
                 <button
                   type="submit"
-                  className="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground shadow-[0_18px_38px_-24px_rgba(44,143,153,0.42)] transition hover:brightness-105"
+                  className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground shadow-[0_18px_38px_-24px_rgba(44,143,153,0.42)] transition hover:brightness-105"
                 >
                   <Wifi className="mr-2 h-4 w-4" />
                   Lấy OTP

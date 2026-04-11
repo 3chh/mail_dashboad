@@ -77,7 +77,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
   return (
     <div className="space-y-4">
-      <Card className="rounded-[28px] bg-card/88">
+      <Card className="rounded-[28px] bg-card/88 !overflow-visible">
         <CardHeader>
           <CardTitle>Tìm kiếm mail / Đơn hàng</CardTitle>
         </CardHeader>
@@ -92,16 +92,16 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             />
 
             <div className="grid gap-3">
-              <div className="grid items-end gap-3 md:grid-cols-2 xl:grid-cols-[1.35fr_1fr_8.5rem_10.5rem_auto_auto]">
-                <div>
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="min-w-[160px] flex-1">
                   <div className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Từ khóa</div>
                   <Input name="keyword" defaultValue={keyword} placeholder='Từ khóa theo dạng "otp / amazon"' className="h-10 rounded-xl" />
                 </div>
-                <div>
+                <div className="min-w-[140px] flex-1">
                   <div className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Người gửi</div>
                   <Input name="sender" defaultValue={sender} placeholder="Người gửi" className="h-10 rounded-xl" />
                 </div>
-                <div>
+                <div className="min-w-[120px] flex-[0_1_150px]">
                   <div className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Khoảng ngày</div>
                   <Select name="lookbackDays" defaultValue={String(lookbackDays)}>
                     <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm">
@@ -115,7 +115,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
+                <div className="min-w-[150px] flex-[0_1_190px]">
                   <div className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Phạm vi</div>
                   <Select name="mode" defaultValue={mode}>
                     <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm">
@@ -127,18 +127,14 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <div className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-transparent">.</div>
-                  <button type="submit" className="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground">
+                <div className="flex shrink-0 gap-2">
+                  <button type="submit" className="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground whitespace-nowrap">
                     <MailSearch className="mr-2 h-4 w-4" />
                     Lọc mailbox
                   </button>
-                </div>
-                <div>
-                  <div className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-transparent">.</div>
                   <Link
                     href={`/api/search/export?${exportParams.toString()}`}
-                    className="control-surface inline-flex h-10 items-center justify-center rounded-xl px-4 text-sm font-medium text-foreground"
+                    className="control-surface inline-flex h-10 items-center justify-center rounded-xl px-4 text-sm font-medium text-foreground whitespace-nowrap"
                   >
                     <Download className="mr-2 h-4 w-4" />
                     Xuất CSV
