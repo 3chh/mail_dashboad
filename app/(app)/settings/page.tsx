@@ -1,7 +1,9 @@
-﻿import { Database, ShieldCheck, UserCog } from "lucide-react";
+import { Building2, Database, ShieldCheck, UserCog } from "lucide-react";
 import { getRequiredAdmin } from "@/lib/auth/get-session";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getSettingsData } from "@/lib/queries/app-data";
+import { LogoutButton } from "@/components/layout/logout-button";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 
 export default async function SettingsPage() {
   const admin = await getRequiredAdmin();
@@ -9,27 +11,51 @@ export default async function SettingsPage() {
 
   return (
     <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-      <Card className="rounded-[28px] bg-card/88">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <UserCog className="h-5 w-5 text-primary" />
-            Tài khoản quản trị
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="subpanel-surface rounded-3xl p-5">
-            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Email quản trị</p>
-            <p className="mt-3 text-sm">{data.adminUser?.email ?? "không có"}</p>
-          </div>
-          <div className="subpanel-surface rounded-3xl p-5">
-            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Vai trò</p>
-            <p className="mt-3 text-sm">{data.adminUser?.role ?? "OPERATOR"}</p>
-          </div>
+      <div className="space-y-4">
+        {/* Left Column: Profile, System (Interface + Session) */}
+        <Card className="rounded-[28px] bg-card/88">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserCog className="h-5 w-5 text-primary" />
+              Tài khoản quản trị
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="subpanel-surface rounded-3xl p-5">
+              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Email quản trị</p>
+              <p className="mt-3 text-sm">{data.adminUser?.email ?? "không có"}</p>
+            </div>
+            <div className="subpanel-surface rounded-3xl p-5">
+              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Vai trò</p>
+              <p className="mt-3 text-sm">{data.adminUser?.role ?? "OPERATOR"}</p>
+            </div>
+          </CardContent>
+        </Card>
 
-        </CardContent>
-      </Card>
+        <Card className="rounded-[28px] bg-card/88 overflow-hidden">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-primary" />
+              Hệ thống
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-6 pb-6 space-y-6">
+            <div className="flex items-center justify-between subpanel-surface rounded-2xl p-4">
+              <div className="space-y-0.5">
+                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Chế độ hiển thị</p>
+              </div>
+              <ThemeToggle />
+            </div>
+
+            <div className="pt-2 border-t border-border/40">
+              <LogoutButton />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="space-y-4">
+        {/* Right Column: Totals, Infrastructure info */}
         <Card className="rounded-[28px] bg-card/88">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

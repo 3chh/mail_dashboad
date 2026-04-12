@@ -1,7 +1,7 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
-import { ActivitySquare, Loader2, MoreHorizontal, RefreshCw, Trash2 } from "lucide-react";
+import { ActivitySquare, Loader2, MoreVertical, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
@@ -160,7 +160,7 @@ export function JobsClient({ initialJobs }: { initialJobs: ScanRun[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <div className="flex items-center gap-2">
             <ActivitySquare className="h-5 w-5 text-primary" />
@@ -168,17 +168,17 @@ export function JobsClient({ initialJobs }: { initialJobs: ScanRun[] }) {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 md:justify-end">
+        <div className="grid grid-cols-2 gap-2 md:flex md:w-auto">
           <Button
             variant="destructive"
-            className="h-10 rounded-xl px-4"
+            className="h-10 flex-1 rounded-xl px-4 text-sm font-medium md:flex-initial"
             onClick={() => void deleteAllHistory()}
             disabled={isDeletingAll}
           >
             {isDeletingAll ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-            Xóa toàn bộ lịch sử
+            Xóa toàn bộ
           </Button>
-          <Button variant="outline" className="h-10 rounded-xl px-4" onClick={() => void refreshJobs()} disabled={isRefreshing}>
+          <Button variant="outline" className="h-10 flex-1 rounded-xl px-4 text-sm font-medium md:flex-initial" onClick={() => void refreshJobs()} disabled={isRefreshing}>
             <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
             Làm mới
           </Button>
@@ -193,24 +193,34 @@ export function JobsClient({ initialJobs }: { initialJobs: ScanRun[] }) {
         return (
           <Card key={job.id} className="rounded-[28px] bg-card/88">
             <CardContent className="space-y-4 p-6">
-              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                <div>
-                  <div className="flex items-center gap-3">
-                    <h2 className="text-lg font-semibold">{job.jobName ?? "Lượt đồng bộ"}</h2>
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <h2 className="truncate text-lg font-semibold">{job.jobName ?? "Lượt đồng bộ"}</h2>
                     <StatusBadge value={job.status} />
                   </div>
-                  <p className="mt-2 text-sm text-muted-foreground">Tạo {formatRelativeTime(job.createdAt)} - {job.totalMailboxCount} email đã chọn</p>
+                  <p className="mt-2 text-sm text-muted-foreground">Tạo {formatRelativeTime(job.createdAt)} - {job.totalMailboxCount} email</p>
                   <p className="mt-1 text-xs text-muted-foreground">{formatDateTime(job.createdAt)}</p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 md:justify-end">
+                <div className="flex shrink-0 items-center gap-2">
+                  <Button
+                    variant="destructive"
+                    className="size-10 shrink-0 rounded-xl p-0"
+                    onClick={() => void deleteRunHistory(job)}
+                    disabled={!isFinished || isDeletingThisRun}
+                    title={isFinished ? "Xóa lịch sử đồng bộ" : "Chỉ xóa được lịch sử đã kết thúc"}
+                  >
+                    {isDeletingThisRun ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  </Button>
+
                   <Dialog>
                     <DialogTrigger
-                      className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-all outline-none hover:bg-accent/60 hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40"
+                      className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-background/50 text-muted-foreground transition-all outline-none hover:bg-accent hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40"
                       title="Xem chi tiết"
                       aria-label="Xem chi tiết"
                     >
-                      <MoreHorizontal className="h-4 w-4" />
+                      <MoreVertical className="h-4 w-4" />
                     </DialogTrigger>
                     <DialogContent className="panel-surface max-w-[min(42rem,calc(100%-2rem))] rounded-[28px] bg-card/95 p-0 sm:max-w-[42rem]">
                       <DialogHeader className="border-b border-border/70 px-6 py-5">
@@ -224,8 +234,8 @@ export function JobsClient({ initialJobs }: { initialJobs: ScanRun[] }) {
                         {job.jobs.map((mailboxJob) => (
                           <div key={mailboxJob.id} className="rounded-2xl border border-border/60 bg-background/70 px-4 py-4">
                             <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <div className="font-medium text-foreground">{mailboxJob.mailbox.emailAddress}</div>
+                              <div className="min-w-0 flex-1">
+                                <div className="truncate font-medium text-foreground">{mailboxJob.mailbox.emailAddress}</div>
                                 <div className="mt-1 text-xs text-muted-foreground">{getProviderLabel(mailboxJob.mailbox.provider)}</div>
                                 <div className="mt-2 text-xs text-muted-foreground">
                                   Đã đồng bộ: {mailboxJob.savedCount} mail - Đã quét: {mailboxJob.scannedCount}/{mailboxJob.totalMessagesFound || "?"}
@@ -240,17 +250,6 @@ export function JobsClient({ initialJobs }: { initialJobs: ScanRun[] }) {
                       </div>
                     </DialogContent>
                   </Dialog>
-
-                  <Button
-                    variant="destructive"
-                    className="h-9 rounded-xl px-3"
-                    onClick={() => void deleteRunHistory(job)}
-                    disabled={!isFinished || isDeletingThisRun}
-                    title={isFinished ? "Xóa lịch sử đồng bộ" : "Chỉ xóa được lịch sử đã kết thúc"}
-                  >
-                    {isDeletingThisRun ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-                    Xóa
-                  </Button>
                 </div>
               </div>
 

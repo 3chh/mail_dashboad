@@ -9,6 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ProviderBadge } from "@/components/shared/provider-badge";
 import { formatDateTime } from "@/lib/utils";
 
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+
 type MailboxRow = {
   id: string;
   emailAddress: string;
@@ -186,10 +188,10 @@ export function MailboxSelectionTable({
       {selectedIds.map((mailboxId) => (
         <input key={mailboxId} type="hidden" name="mailboxId" value={mailboxId} />
       ))}
-      {/* Filters: stack on mobile, 2-col on sm, single row on xl */}
-      <div className="grid gap-2">
-        {/* Search input: always full width */}
-        <div>
+      {/* Filters: Responsive flex layout that wraps on desktop, stacks on mobile */}
+      <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end">
+        {/* Search input: flexible width */}
+        <div className="w-full flex-1 lg:min-w-[240px]">
           <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Tìm kiếm</div>
           <Input
             value={searchTerm}
@@ -198,9 +200,9 @@ export function MailboxSelectionTable({
             className="h-10 rounded-xl"
           />
         </div>
-        {/* Provider + Group: side by side on all screens */}
-        <div className="grid grid-cols-2 gap-2 xl:flex xl:gap-3">
-          <div className="xl:min-w-[130px] xl:flex-[0_1_160px]">
+        {/* Provider + Group: side by side on mobile and tablet, stretch on desktop */}
+        <div className="grid w-full grid-cols-2 gap-2 lg:w-auto lg:flex lg:flex-1 lg:gap-3">
+          <div className="lg:min-w-[160px] lg:flex-1">
             <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Nhà cung cấp</div>
             <Select value={providerFilter} onValueChange={(value) => setProviderFilter((value ?? "ALL") as "ALL" | "GMAIL" | "OUTLOOK")}>
               <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm">
@@ -213,14 +215,14 @@ export function MailboxSelectionTable({
               </SelectContent>
             </Select>
           </div>
-          <div className="xl:min-w-[110px] xl:flex-[0_1_140px]">
+          <div className="lg:min-w-[140px] lg:flex-1">
             <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Nhóm</div>
             <Select value={groupFilter} onValueChange={(value) => setGroupFilter(value ?? "ALL")}>
               <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm">
                 <SelectValue>{(value) => getGroupFilterLabel(value as string | null)}</SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">Tất cả</SelectItem>
+                <SelectItem value="ALL">All</SelectItem>
                 {availableGroups.map((group) => (
                   <SelectItem key={group.id} value={group.id}>
                     {group.name}
@@ -230,18 +232,18 @@ export function MailboxSelectionTable({
             </Select>
           </div>
         </div>
-        {/* Action buttons: always side by side, full width split equally */}
-        <div className="grid grid-cols-2 gap-2">
-          <Button type="button" variant="outline" className="h-10 rounded-xl px-3" onClick={selectAllVisible}>
+        {/* Action buttons: side by side on mobile, stretch on desktop */}
+        <div className="grid w-full grid-cols-2 gap-2 lg:w-auto lg:flex lg:flex-1 lg:gap-2">
+          <Button type="button" variant="outline" className="h-10 rounded-xl px-4 whitespace-nowrap lg:flex-1" onClick={selectAllVisible}>
             Chọn tất cả
           </Button>
-          <Button type="button" variant="outline" className="h-10 rounded-xl px-3" onClick={clearSelection}>
+          <Button type="button" variant="outline" className="h-10 rounded-xl px-4 whitespace-nowrap lg:flex-1" onClick={clearSelection}>
             Bỏ chọn
           </Button>
         </div>
-        {/* Action slot (e.g. Lấy OTP button): full width */}
+        {/* Action slot (e.g. Lấy OTP button) */}
         {action ? (
-          <div>{action}</div>
+          <div className="w-full lg:flex-1">{action}</div>
         ) : null}
       </div>
 
@@ -251,7 +253,7 @@ export function MailboxSelectionTable({
 
       {/* Table: outer clips width, inner scrolls both axes */}
       <div className="subpanel-surface overflow-hidden rounded-[24px]">
-        <div className="h-[360px] overflow-auto">
+        <ScrollArea className="h-[360px] no-scrollbar">
           <div className="min-w-[640px] select-none">
             <Table>
               <TableHeader className="sticky top-0 z-10 bg-background/90 backdrop-blur-xl [&_tr]:border-b [&_th]:bg-background/90">
@@ -299,7 +301,7 @@ export function MailboxSelectionTable({
               </TableBody>
             </Table>
           </div>
-        </div>
+        </ScrollArea>
       </div>
     </div>
   );

@@ -91,50 +91,59 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               selectedMailboxIds={selectedMailboxIds}
             />
 
-            <div className="grid gap-3">
-              <div className="flex flex-wrap items-end gap-3">
-                <div className="min-w-[160px] flex-1">
-                  <div className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Từ khóa</div>
-                  <Input name="keyword" defaultValue={keyword} placeholder='Từ khóa theo dạng "otp / amazon"' className="h-10 rounded-xl" />
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end">
+                {/* Search Fields Group */}
+                <div className="grid grid-cols-2 gap-3 lg:flex lg:flex-1 lg:min-w-[400px]">
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Từ khóa</div>
+                    <Input name="keyword" defaultValue={keyword} placeholder='Từ khóa theo dạng "otp / amazon"' className="h-10 w-full rounded-xl px-3" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Người gửi</div>
+                    <Input name="sender" defaultValue={sender} placeholder="Người gửi" className="h-10 w-full rounded-xl px-3" />
+                  </div>
                 </div>
-                <div className="min-w-[140px] flex-1">
-                  <div className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Người gửi</div>
-                  <Input name="sender" defaultValue={sender} placeholder="Người gửi" className="h-10 rounded-xl" />
+
+                {/* Selectors Group */}
+                <div className="grid grid-cols-2 gap-3 lg:flex lg:flex-1 lg:gap-3">
+                  <div className="min-w-0 flex-1 lg:w-[130px]">
+                    <div className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Khoảng ngày</div>
+                    <Select name="lookbackDays" defaultValue={String(lookbackDays)}>
+                      <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1 ngày</SelectItem>
+                        <SelectItem value="7">7 ngày</SelectItem>
+                        <SelectItem value="30">30 ngày</SelectItem>
+                        <SelectItem value="90">90 ngày</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="min-w-0 flex-1 lg:w-[160px]">
+                    <div className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Phạm vi</div>
+                    <Select name="mode" defaultValue={mode}>
+                      <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="body">Chỉ tìm trong body</SelectItem>
+                        <SelectItem value="order">Chỉ tìm trong đơn hàng</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="min-w-[120px] flex-[0_1_150px]">
-                  <div className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Khoảng ngày</div>
-                  <Select name="lookbackDays" defaultValue={String(lookbackDays)}>
-                    <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1 ngày</SelectItem>
-                      <SelectItem value="7">7 ngày</SelectItem>
-                      <SelectItem value="30">30 ngày</SelectItem>
-                      <SelectItem value="90">90 ngày</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="min-w-[150px] flex-[0_1_190px]">
-                  <div className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Phạm vi</div>
-                  <Select name="mode" defaultValue={mode}>
-                    <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="body">Chỉ tìm trong body</SelectItem>
-                      <SelectItem value="order">Chỉ tìm trong đơn hàng</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex shrink-0 gap-2">
-                  <button type="submit" className="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground whitespace-nowrap">
+
+                {/* Buttons Group */}
+                <div className="grid grid-cols-2 gap-2 lg:flex lg:flex-1">
+                  <button type="submit" className="inline-flex h-10 flex-1 items-center justify-center rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground whitespace-nowrap lg:px-6">
                     <MailSearch className="mr-2 h-4 w-4" />
                     Lọc mailbox
                   </button>
                   <Link
                     href={`/api/search/export?${exportParams.toString()}`}
-                    className="control-surface inline-flex h-10 items-center justify-center rounded-xl px-4 text-sm font-medium text-foreground whitespace-nowrap"
+                    className="control-surface inline-flex h-10 flex-1 items-center justify-center rounded-xl px-4 text-sm font-medium text-foreground whitespace-nowrap lg:px-6"
                   >
                     <Download className="mr-2 h-4 w-4" />
                     Xuất CSV

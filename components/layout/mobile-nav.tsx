@@ -17,7 +17,7 @@ export function MobileNav() {
   const pathname = usePathname();
 
   return (
-    <div className="overflow-x-auto lg:hidden">
+    <div className="no-scrollbar overflow-x-auto lg:hidden">
       <div className="flex min-w-max gap-2">
         {items.map((item) => {
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);

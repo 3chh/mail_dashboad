@@ -492,5 +492,55 @@
     border-color: rgba(236, 171, 74, 0.56);
     color: rgba(255, 241, 210, 0.99);
   }
+
+  .glass-surface {
+    @apply backdrop-blur-md;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+  }
+
+  .dark .glass-surface {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.4) 0%, rgba(15, 23, 42, 0.1) 100%);
+    border-color: rgba(255, 255, 255, 0.05);
+  }
+
+  .glow-primary {
+    position: relative;
+    &::after {
+      content: "";
+      position: absolute;
+      inset: -4px;
+      z-index: -1;
+      background: var(--primary);
+      filter: blur(12px);
+      opacity: 0.15;
+      border-radius: inherit;
+    }
+  }
+
+  .header-label {
+    @apply text-[0.66rem] font-bold uppercase tracking-[0.28em] text-muted-foreground/80;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+  }
+
+  .main-title {
+    @apply text-2xl font-bold tracking-tight text-foreground lg:text-3xl;
+    background: linear-gradient(to bottom right, var(--foreground) 60%, var(--muted-foreground));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
 }
 
+@layer utilities {
+  .no-scrollbar,
+  .no-scrollbar [data-slot="scroll-area-viewport"],
+  .no-scrollbar [data-radix-scroll-area-viewport],
+  .no-scrollbar [data-slot="table-container"] {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+    &::-webkit-scrollbar {
+      display: none !important;
+    }
+  }
+}

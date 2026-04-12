@@ -41,8 +41,8 @@ export function StartScanDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger className="inline-flex h-11 items-center rounded-2xl bg-primary px-5 text-sm font-medium text-primary-foreground shadow-[0_18px_40px_-24px_rgba(44,143,153,0.45)] transition hover:brightness-105">
-        <Play className="mr-2 h-4 w-4" />
+      <DialogTrigger className="glow-primary inline-flex h-11 items-center rounded-2xl bg-[#0d9488] px-5 text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98]">
+        <Play className="mr-2 h-4 fill-white w-4" />
         Đồng bộ mailbox đang hoạt động
       </DialogTrigger>
       <DialogContent className="panel-surface rounded-[28px] bg-card/95">

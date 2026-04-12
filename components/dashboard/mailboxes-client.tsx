@@ -593,58 +593,60 @@ export function MailboxesClient({
         </CardHeader>
         <CardContent className="space-y-3 pt-3">
           <div className="subpanel-surface rounded-[20px] p-3">
-            <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-[1.08fr_1fr_0.78fr_1.12fr_auto]">
+            <div className="flex flex-col gap-2.5 lg:flex-row lg:flex-wrap lg:items-center">
               <Input
                 value={emailAddress}
                 onChange={(event) => setEmailAddress(event.target.value)}
                 placeholder="user@example.com"
-                className="h-10 rounded-xl px-3"
+                className="h-10 flex-1 rounded-xl px-3 lg:min-w-[180px]"
               />
               <Input
                 value={displayName}
                 onChange={(event) => setDisplayName(event.target.value)}
                 placeholder="Tên hiển thị (không bắt buộc)"
-                className="h-10 rounded-xl px-3"
+                className="h-10 flex-1 rounded-xl px-3 lg:min-w-[160px]"
               />
-              <Select value={provider} onValueChange={(value) => value && setProvider(value as "GMAIL" | "OUTLOOK")}>
-                <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm text-foreground/95">
-                  <SelectValue>{(value) => getProviderLabel(value as string | null)}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="GMAIL">Gmail</SelectItem>
-                  <SelectItem value="OUTLOOK">Hotmail / Outlook</SelectItem>
-                </SelectContent>
-              </Select>
-              <div className="flex items-center gap-2">
-                <div className="flex-1">
-                  <Select value={selectedGroupId} onValueChange={(value) => setSelectedGroupId(value ?? "ALL")}>
-                    <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm text-foreground/95">
-                      <SelectValue>{(value) => getSelectedGroupLabel(value as string | null)}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ALL">All</SelectItem>
-                      {groups.map((group) => (
-                        <SelectItem key={group.id} value={group.id}>
-                          {group.name} ({group.mailboxCount})
-                        </SelectItem>
-                      ))}
-                      <SelectItem value="__new__">+ Tạo nhóm mới</SelectItem>
-                    </SelectContent>
-                  </Select>
+              <div className="grid w-full grid-cols-2 gap-2.5 lg:w-auto lg:flex lg:flex-1 lg:gap-2.5">
+                <Select value={provider} onValueChange={(value) => value && setProvider(value as "GMAIL" | "OUTLOOK")}>
+                  <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm text-foreground/95 lg:flex-1">
+                    <SelectValue>{(value) => getProviderLabel(value as string | null)}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="GMAIL">Gmail</SelectItem>
+                    <SelectItem value="OUTLOOK">Hotmail / Outlook</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="flex items-center gap-2 lg:flex-1">
+                  <div className="flex-1">
+                    <Select value={selectedGroupId} onValueChange={(value) => setSelectedGroupId(value ?? "ALL")}>
+                      <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm text-foreground/95">
+                        <SelectValue>{(value) => getSelectedGroupLabel(value as string | null)}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL">All</SelectItem>
+                        {groups.map((group) => (
+                          <SelectItem key={group.id} value={group.id}>
+                            {group.name} ({group.mailboxCount})
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="__new__">+ Tạo nhóm mới</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {activeGroup ? (
+                    <div className="flex shrink-0 gap-1.5">
+                      <Button type="button" variant="ghost" size="icon-sm" className="rounded-xl text-muted-foreground hover:text-foreground" onClick={() => void renameGroup(activeGroup)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button type="button" variant="ghost" size="icon-sm" className="rounded-xl text-[color:var(--danger)] hover:bg-[color:var(--danger-soft)] hover:text-[color:var(--danger)]" onClick={() => void deleteGroup(activeGroup)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : null}
                 </div>
-                {activeGroup ? (
-                  <>
-                    <Button type="button" variant="ghost" size="icon-sm" className="rounded-xl text-muted-foreground hover:text-foreground" onClick={() => void renameGroup(activeGroup)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button type="button" variant="ghost" size="icon-sm" className="rounded-xl text-[color:var(--danger)] hover:bg-[color:var(--danger-soft)] hover:text-[color:var(--danger)]" onClick={() => void deleteGroup(activeGroup)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </>
-                ) : null}
               </div>
               <Button
-                className="h-10 rounded-xl px-4 text-sm font-semibold"
+                className="h-10 w-full rounded-xl px-4 text-sm font-semibold lg:w-auto lg:px-6"
                 onClick={() => void createMailbox()}
                 disabled={isPending || !emailAddress.trim() || (selectedGroupId === "__new__" && !newGroupName.trim())}
               >
@@ -749,8 +751,8 @@ export function MailboxesClient({
 
             <div className="subpanel-surface rounded-[20px] p-3">
               <div className="mb-1.5 min-h-[1.1rem] text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-foreground/88">Bộ lọc</div>
-              <div className="grid items-end gap-2 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_8.5rem_8.5rem_8.5rem]">
-                <div className="min-w-0">
+              <div className="flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-end">
+                <div className="w-full flex-1 lg:min-w-[200px]">
                   <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Tìm kiếm</div>
                   <Input
                     value={searchTerm}
@@ -759,37 +761,39 @@ export function MailboxesClient({
                     className="h-10 w-full rounded-xl px-3"
                   />
                 </div>
-                <div className="w-full">
-                  <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Nhà cung cấp</div>
-                  <Select value={providerFilter} onValueChange={(value) => setProviderFilter((value ?? "ALL") as "ALL" | "GMAIL" | "OUTLOOK")}>
-                    <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm text-foreground/95">
-                      <SelectValue>{(value) => getProviderFilterLabel(value as string | null)}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ALL">Tất cả</SelectItem>
-                      <SelectItem value="GMAIL">Gmail</SelectItem>
-                      <SelectItem value="OUTLOOK">Hotmail / Outlook</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="grid w-full grid-cols-2 gap-2 lg:w-auto lg:flex lg:flex-1 lg:gap-2">
+                  <div className="lg:min-w-[130px] lg:flex-1">
+                    <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Nhà cung cấp</div>
+                    <Select value={providerFilter} onValueChange={(value) => setProviderFilter((value ?? "ALL") as "ALL" | "GMAIL" | "OUTLOOK")}>
+                      <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm text-foreground/95">
+                        <SelectValue>{(value) => getProviderFilterLabel(value as string | null)}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL">Tất cả</SelectItem>
+                        <SelectItem value="GMAIL">Gmail</SelectItem>
+                        <SelectItem value="OUTLOOK">Hotmail / Outlook</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="lg:min-w-[130px] lg:flex-1">
+                    <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Trạng thái</div>
+                    <Select value={statusFilter} onValueChange={(value) => setStatusFilter((value ?? "ALL") as "ALL" | MailboxStatus)}>
+                      <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm text-foreground/95">
+                        <SelectValue>{(value) => getStatusFilterLabel(value as string | null)}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL">Tất cả</SelectItem>
+                        <SelectItem value="ACTIVE">Đang hoạt động</SelectItem>
+                        <SelectItem value="PENDING_CONSENT">Chờ consent</SelectItem>
+                        <SelectItem value="RECONNECT_REQUIRED">Cần kết nối lại</SelectItem>
+                        <SelectItem value="ERROR">Lỗi</SelectItem>
+                        <SelectItem value="DISABLED">Đã tắt</SelectItem>
+                        <SelectItem value="DRAFT">Nháp</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="w-full">
-                  <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Trạng thái</div>
-                  <Select value={statusFilter} onValueChange={(value) => setStatusFilter((value ?? "ALL") as "ALL" | MailboxStatus)}>
-                    <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm text-foreground/95">
-                      <SelectValue>{(value) => getStatusFilterLabel(value as string | null)}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ALL">Tất cả</SelectItem>
-                      <SelectItem value="ACTIVE">Đang hoạt động</SelectItem>
-                      <SelectItem value="PENDING_CONSENT">Chờ consent</SelectItem>
-                      <SelectItem value="RECONNECT_REQUIRED">Cần kết nối lại</SelectItem>
-                      <SelectItem value="ERROR">Lỗi</SelectItem>
-                      <SelectItem value="DISABLED">Đã tắt</SelectItem>
-                      <SelectItem value="DRAFT">Nháp</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="w-full">
+                <div className="w-full lg:w-[140px] lg:flex-initial">
                   <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Nhóm</div>
                   <Select value={groupFilter} onValueChange={(value) => setGroupFilter(value ?? "ALL")}>
                     <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm text-foreground/95">
@@ -810,11 +814,11 @@ export function MailboxesClient({
 
             <div className="subpanel-surface rounded-[20px] p-3.5">
               <div className="mb-1.5 min-h-[1.1rem] text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-foreground/88">Thao tác</div>
-              <div className="grid items-end gap-2.5 xl:grid-cols-[7rem_8.5rem]">
-                <div>
+              <div className="grid grid-cols-2 items-end gap-2.5 lg:flex lg:flex-row">
+                <div className="w-full lg:flex-1 lg:min-w-[120px]">
                   <div className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Khoảng ngày</div>
                   <Select value={syncWindowDays} onValueChange={(value) => setSyncWindowDays(value ?? "7")}>
-                    <SelectTrigger className="h-10 w-[7rem] rounded-xl px-3 text-sm text-foreground/95">
+                    <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm text-foreground/95">
                       <SelectValue>{(value) => getSyncWindowLabel(value as string | null)}</SelectValue>
                     </SelectTrigger>
                     <SelectContent>
@@ -824,9 +828,9 @@ export function MailboxesClient({
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <div className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-transparent">.</div>
-                  <Button className="h-10 w-[8.5rem] rounded-xl px-3.5 text-sm font-semibold" onClick={() => void syncSelected()} disabled={isPending}>
+                <div className="w-full lg:flex-1">
+                  <div className="mb-1.5 hidden text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground lg:block lg:text-transparent">.</div>
+                  <Button className="h-10 w-full rounded-xl px-3.5 text-sm font-semibold" onClick={() => void syncSelected()} disabled={isPending}>
                     {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                     Đồng bộ
                   </Button>

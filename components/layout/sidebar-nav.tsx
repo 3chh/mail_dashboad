@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Building2, ChartColumn, MailSearch, Settings2, ShieldCheck, Workflow } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, initialsFromName } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import type { Session } from "next-auth";
 
 const navigation = [
   { href: "/dashboard", label: "Bảng điều khiển", icon: ChartColumn },
@@ -14,17 +16,27 @@ const navigation = [
   { href: "/settings", label: "Cài đặt", icon: Settings2 },
 ];
 
-export function SidebarNav() {
+export function SidebarNav({ session }: { session: Session }) {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden w-72 flex-col rounded-[28px] border border-sidebar-border/80 bg-[linear-gradient(180deg,color-mix(in_oklab,var(--sidebar)_96%,black_4%),color-mix(in_oklab,var(--sidebar)_84%,var(--sidebar-accent)))] px-5 py-6 text-sidebar-foreground shadow-[0_34px_90px_-48px_rgba(0,8,16,0.8)] lg:flex">
+    <aside className="hidden w-[320px] flex-col rounded-[28px] border border-sidebar-border/80 bg-[linear-gradient(180deg,color-mix(in_oklab,var(--sidebar)_96%,black_4%),color-mix(in_oklab,var(--sidebar)_84%,var(--sidebar-accent)))] px-5 py-6 text-sidebar-foreground shadow-[0_34px_90px_-48px_rgba(0,8,16,0.8)] lg:flex">
       <div className="mb-10">
-        <div className="inline-flex items-center rounded-full border border-sidebar-primary/24 bg-sidebar-primary/14 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-sidebar-primary">
-          Pilot
+        <div className="flex items-center gap-3 p-2 group bg-sidebar-primary/5 rounded-[22px] border border-sidebar-primary/10 transition-all hover:bg-sidebar-primary/10">
+          <Avatar className="h-10 w-10 ring-2 ring-sidebar-primary/20 ring-offset-2 ring-offset-sidebar transition-transform group-hover:scale-105">
+            <AvatarImage src={session.user.image ?? undefined} />
+            <AvatarFallback className="bg-sidebar-primary/20 text-sidebar-primary text-xs font-bold">
+              {initialsFromName(session.user.name)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-semibold text-white tracking-tight">{session.user.name ?? "Quản trị viên"}</div>
+            <div className="truncate text-[0.65rem] font-medium text-sidebar-foreground/60 leading-none mt-1 uppercase tracking-wider">Pilot</div>
+          </div>
         </div>
-        <div className="mt-4">
-          <h1 className="text-2xl font-semibold">Trung tâm Mailbox</h1>
+        
+        <div className="mt-8 px-2">
+          <h1 className="text-xl font-bold tracking-tight text-white/90">Trung tâm Mailbox</h1>
         </div>
       </div>
 
