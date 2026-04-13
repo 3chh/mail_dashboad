@@ -1,4 +1,4 @@
-type SearchParamValue = string | string[] | undefined;
+type SearchParamValue = string | string[] | null | undefined;
 
 export function parsePageParam(value: SearchParamValue, fallback = 1) {
   const raw = Array.isArray(value) ? value[0] : value;
