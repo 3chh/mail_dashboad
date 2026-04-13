@@ -587,11 +587,11 @@ export function MailboxesClient({
 
   return (
     <div className="space-y-4 xl:space-y-5">
-      <Card size="sm" className="rounded-[24px] bg-card/92">
+      <Card size="sm" className="rounded-[24px] bg-card/92 gap-1.5">
         <CardHeader className="gap-1.5 pb-0">
-          <CardTitle className="text-lg text-foreground">Thêm mailbox vào quản lý nhóm</CardTitle>
+          <CardTitle className="font-sans !text-2xl font-semibold tracking-tight text-foreground">Thêm mailbox</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 pt-3">
+        <CardContent className="space-y-3 pt-1.5">
           <div className="subpanel-surface rounded-[20px] p-3">
             <div className="flex flex-col gap-2.5 lg:flex-row lg:flex-wrap lg:items-center">
               <Input
@@ -674,11 +674,11 @@ export function MailboxesClient({
       </Card>
 
       {editingMailbox ? (
-        <Card size="sm" className="rounded-[24px] bg-card/92">
+        <Card size="sm" className="rounded-[24px] bg-card/92 gap-1.5">
           <CardHeader className="gap-1.5 pb-0">
-            <CardTitle className="text-lg text-foreground">Chỉnh sửa mailbox</CardTitle>
+            <CardTitle className="font-sans !text-2xl font-semibold tracking-tight text-foreground">Chỉnh sửa mailbox</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 pt-3">
+          <CardContent className="space-y-3 pt-1.5">
             <div className="subpanel-surface rounded-[20px] p-3">
               <div className="grid gap-2.5 xl:grid-cols-[1.2fr_1fr_1.1fr_auto]">
                 <Input value={editingMailbox.emailAddress} disabled className="h-10 rounded-xl px-3" />
@@ -727,11 +727,11 @@ export function MailboxesClient({
         </Card>
       ) : null}
 
-      <Card size="sm" className="rounded-[24px] bg-card/92">
+      <Card size="sm" className="rounded-[24px] bg-card/92 gap-1.5">
         <CardHeader className="gap-1.5 pb-0">
-          <CardTitle className="text-lg text-foreground">Trung tâm điều khiển mailbox</CardTitle>
+          <CardTitle className="font-sans !text-2xl font-semibold tracking-tight text-foreground">Trung tâm điều khiển mailbox</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 pt-3">
+        <CardContent className="space-y-3 pt-1.5">
           <div className="grid gap-3 xl:grid-cols-[12.25rem_minmax(0,1fr)_17.5rem]">
             <div className="subpanel-surface rounded-[18px] p-2.5">
               <div className="min-h-[1.1rem] text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-foreground/88">Đã chọn</div>

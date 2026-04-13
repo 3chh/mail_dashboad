@@ -4,9 +4,11 @@ import { getRequiredAdmin } from "@/lib/auth/get-session";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PaginationControls } from "@/components/shared/pagination-controls";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MailboxSelectionTable } from "@/components/shared/mailbox-selection-table";
 import { buildLocalSearchSummary, parseLookbackDays, parseSearchMode } from "@/lib/mail/query";
+import { createSearchParams, paginateArray, parsePageParam } from "@/lib/pagination";
 import { searchMailToolResults } from "@/lib/queries/app-data";
 import { parseMultiValueParam, resolveMailboxSelection } from "@/lib/queries/mailbox-filter";
 import { formatDateTime, truncate } from "@/lib/utils";
@@ -14,6 +16,8 @@ import { formatDateTime, truncate } from "@/lib/utils";
 type SearchPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
+
+const SEARCH_PAGE_SIZE = 5;
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const admin = await getRequiredAdmin();
@@ -27,6 +31,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const withAttachments = params.withAttachments === "true";
   const lookbackDays = parseLookbackDays(typeof params.lookbackDays === "string" ? params.lookbackDays : undefined, 30);
   const mode = parseSearchMode(typeof params.mode === "string" ? params.mode : undefined);
+  const page = parsePageParam(params.page, 1);
 
   const selection = await resolveMailboxSelection(admin.id, parseMultiValueParam(params.mailboxId));
   const activeMailboxes = selection.mailboxes.filter((mailbox) => mailbox.status === "ACTIVE");
@@ -75,14 +80,27 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     exportParams.append("mailboxId", mailboxId);
   }
 
+  const pagedResults = paginateArray(results, page, SEARCH_PAGE_SIZE);
+
+  function buildPageHref(nextPage: number) {
+    const nextParams = createSearchParams(params);
+    if (nextPage <= 1) {
+      nextParams.delete("page");
+    } else {
+      nextParams.set("page", String(nextPage));
+    }
+    const query = nextParams.toString();
+    return query ? `/search?${query}` : "/search";
+  }
+
   return (
     <div className="space-y-4">
-      <Card className="rounded-[28px] bg-card/88 !overflow-visible">
-        <CardHeader>
-          <CardTitle>Tìm kiếm mail / Đơn hàng</CardTitle>
+      <Card className="rounded-[28px] bg-card/88 !overflow-visible gap-2">
+        <CardHeader className="pb-1">
+          <CardTitle className="font-sans !text-2xl font-semibold tracking-tight text-foreground">Tìm kiếm mail / Đơn hàng</CardTitle>
         </CardHeader>
         <CardContent>
-          <form className="grid gap-3">
+          <form action="/search" className="grid gap-3">
             <MailboxSelectionTable
               mailboxes={activeMailboxes.map((mailbox) => ({
                 ...mailbox,
@@ -181,14 +199,14 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           <Card className="rounded-[20px] bg-card/88">
             <CardContent className="flex flex-col gap-2 p-4 xl:flex-row xl:items-center xl:justify-between">
               <span className="mr-4 text-sm font-medium text-muted-foreground">
-                Phạm vi tìm kiếm: {selectedMailboxIds.length} mailbox, {results.length} kết quả duy nhất
+                Phạm vi tìm kiếm: {selectedMailboxIds.length} mailbox, {pagedResults.totalItems} kết quả duy nhất
               </span>
               <span className="text-sm text-muted-foreground">{effectiveSummary || "mode:body | days:30"}</span>
             </CardContent>
           </Card>
 
-          {results.length > 0 ? (
-            results.map((result) => (
+          {pagedResults.totalItems > 0 ? (
+            pagedResults.items.map((result) => (
               <Card key={result.id} className="rounded-[28px] bg-card/88">
                 <CardContent className="space-y-4 p-6">
                   <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
@@ -252,6 +270,15 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               </CardContent>
             </Card>
           )}
+
+          <PaginationControls
+            currentPage={pagedResults.currentPage}
+            totalPages={pagedResults.totalPages}
+            totalItems={pagedResults.totalItems}
+            pageSize={pagedResults.pageSize}
+            itemLabel="kết quả"
+            buildPageHref={buildPageHref}
+          />
         </div>
       )}
     </div>

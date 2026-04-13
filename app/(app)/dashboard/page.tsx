@@ -110,9 +110,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       ) : null}
 
       <section className="grid gap-3 xl:grid-cols-3">
-        <Card size="sm" className="rounded-[24px] bg-card/86">
-          <CardHeader className="pb-1.5">
-            <CardTitle className="text-sm">Tổng quan</CardTitle>
+        <Card size="sm" className="rounded-[24px] bg-card/86 gap-1.5">
+          <CardHeader className="pb-0.5">
+            <CardTitle className="font-sans !text-2xl font-semibold tracking-tight text-foreground">Tổng quan</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-2 sm:grid-cols-2">
             <SummaryMetric title="Tổng mailbox" value={String(data.stats.mailboxCount)} hint="Gmail + Hotmail" icon={Mail} tone="neutral" />
@@ -128,9 +128,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           </CardContent>
         </Card>
 
-        <Card size="sm" className="rounded-[24px] bg-card/86">
-          <CardHeader className="pb-1.5">
-            <CardTitle className="text-sm">Cảnh báo</CardTitle>
+        <Card size="sm" className="rounded-[24px] bg-card/86 gap-1.5">
+          <CardHeader className="pb-0.5">
+            <CardTitle className="font-sans !text-2xl font-semibold tracking-tight text-foreground">Cảnh báo</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-2 sm:grid-cols-2">
             <SummaryMetric
@@ -154,9 +154,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           </CardContent>
         </Card>
 
-        <Card size="sm" className="rounded-[24px] bg-card/86">
-          <CardHeader className="pb-1.5">
-            <CardTitle className="text-sm">Kết quả</CardTitle>
+        <Card size="sm" className="rounded-[24px] bg-card/86 gap-1.5">
+          <CardHeader className="pb-0.5">
+            <CardTitle className="font-sans !text-2xl font-semibold tracking-tight text-foreground">Kết quả</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-2 sm:grid-cols-2">
             <SummaryMetric title="OTP" value={String(data.stats.otpsFound)} hint="Đã phát hiện" icon={ShieldCheck} tone="output" />
@@ -174,9 +174,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         initialStatusFilter={initialStatusFilter}
       />
 
-      <Card className="rounded-[28px] bg-card/86">
-        <CardHeader>
-          <CardTitle>Hoạt động gần đây</CardTitle>
+      <Card className="rounded-[28px] bg-card/86 gap-2">
+        <CardHeader className="pb-1">
+          <CardTitle className="font-sans !text-2xl font-semibold tracking-tight text-foreground">Hoạt động gần đây</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {data.recentActivity.length > 0 ? (

@@ -3,8 +3,10 @@ import { getRequiredAdmin } from "@/lib/auth/get-session";
 import { CopyOtpButton } from "@/components/otp/copy-otp-button";
 import { ConfidenceBadge } from "@/components/shared/confidence-badge";
 import { MailboxSelectionTable } from "@/components/shared/mailbox-selection-table";
+import { PaginationControls } from "@/components/shared/pagination-controls";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { createSearchParams, paginateArray, parsePageParam } from "@/lib/pagination";
 import { getOtpMonitorData } from "@/lib/queries/app-data";
 import { parseMultiValueParam, resolveMailboxSelection } from "@/lib/queries/mailbox-filter";
 import { formatDateTime, truncate } from "@/lib/utils";
@@ -13,25 +15,40 @@ type OtpPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
+const OTP_PAGE_SIZE = 5;
+
 export default async function OtpPage({ searchParams }: OtpPageProps) {
   const admin = await getRequiredAdmin();
   const params = await searchParams;
+  const page = parsePageParam(params.page, 1);
 
   const selection = await resolveMailboxSelection(admin.id, parseMultiValueParam(params.mailboxId));
   const activeMailboxes = selection.mailboxes.filter((mailbox) => mailbox.status === "ACTIVE");
   const activeMailboxIds = new Set(activeMailboxes.map((mailbox) => mailbox.id));
   const selectedMailboxIds = selection.selectedMailboxIds.filter((mailboxId) => activeMailboxIds.has(mailboxId));
+  const pagedMailboxIds = paginateArray(selectedMailboxIds, page, OTP_PAGE_SIZE);
 
-  const results = selectedMailboxIds.length > 0 ? await getOtpMonitorData(selectedMailboxIds) : [];
+  const results = pagedMailboxIds.totalItems > 0 ? await getOtpMonitorData(pagedMailboxIds.items) : [];
+
+  function buildPageHref(nextPage: number) {
+    const nextParams = createSearchParams(params);
+    if (nextPage <= 1) {
+      nextParams.delete("page");
+    } else {
+      nextParams.set("page", String(nextPage));
+    }
+    const query = nextParams.toString();
+    return query ? `/otp?${query}` : "/otp";
+  }
 
   return (
     <div className="space-y-4">
-      <Card className="rounded-[28px] bg-card/88 !overflow-visible">
-        <CardHeader>
-          <CardTitle>Lấy OTP từ mail</CardTitle>
+      <Card className="rounded-[28px] bg-card/88 !overflow-visible gap-2">
+        <CardHeader className="pb-1">
+          <CardTitle className="font-sans !text-2xl font-semibold tracking-tight text-foreground">Lấy OTP từ mail</CardTitle>
         </CardHeader>
         <CardContent>
-          <form className="grid gap-3">
+          <form action="/otp" className="grid gap-3">
             <MailboxSelectionTable
               mailboxes={activeMailboxes.map((mailbox) => ({
                 ...mailbox,
@@ -123,6 +140,15 @@ export default async function OtpPage({ searchParams }: OtpPageProps) {
               </Card>
             );
           })}
+
+          <PaginationControls
+            currentPage={pagedMailboxIds.currentPage}
+            totalPages={pagedMailboxIds.totalPages}
+            totalItems={pagedMailboxIds.totalItems}
+            pageSize={pagedMailboxIds.pageSize}
+            itemLabel="mailbox"
+            buildPageHref={buildPageHref}
+          />
         </div>
       )}
     </div>

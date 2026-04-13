@@ -157,8 +157,7 @@ function buildRecentSyncActivity(
         timestamp: run.completedAt ?? run.createdAt,
       };
     })
-    .sort((left, right) => right.timestamp.getTime() - left.timestamp.getTime())
-    .slice(0, 6);
+    .sort((left, right) => right.timestamp.getTime() - left.timestamp.getTime());
 }
 
 export async function getDashboardData(adminUserId: string) {
@@ -257,6 +256,7 @@ export async function getDashboardData(adminUserId: string) {
         savedCount: true,
       },
       orderBy: { createdAt: "desc" },
+      take: 80,
     }),
     prisma.otpDetection.findMany({
       where: {
@@ -272,7 +272,7 @@ export async function getDashboardData(adminUserId: string) {
         },
       },
       orderBy: { detectedAt: "desc" },
-      take: 6,
+      take: 20,
     }),
     prisma.orderExtraction.findMany({
       where: {
@@ -288,7 +288,7 @@ export async function getDashboardData(adminUserId: string) {
         },
       },
       orderBy: { receivedAt: "desc" },
-      take: 6,
+      take: 20,
     }),
     prisma.mailMessage.findMany({
       where: {
@@ -418,6 +418,6 @@ export async function getDashboardData(adminUserId: string) {
       })),
     ]
       .sort((left, right) => right.timestamp.getTime() - left.timestamp.getTime())
-      .slice(0, 8),
+      .slice(0, 5),
   };
 }

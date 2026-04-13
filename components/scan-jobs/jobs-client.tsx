@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import { ActivitySquare, Loader2, MoreVertical, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -65,22 +65,30 @@ function isFinishedStatus(status: ScanRun["status"]) {
   return status === "COMPLETED" || status === "FAILED";
 }
 
-export function JobsClient({ initialJobs }: { initialJobs: ScanRun[] }) {
+export function JobsClient({ initialJobs, currentPage, pageSize }: { initialJobs: ScanRun[]; currentPage: number; pageSize: number }) {
   const [jobs, setJobs] = useState(initialJobs);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [deletingRunId, setDeletingRunId] = useState<string | null>(null);
   const [isDeletingAll, setIsDeletingAll] = useState(false);
 
+  useEffect(() => {
+    setJobs(initialJobs);
+  }, [initialJobs]);
+
   async function refreshJobs() {
     setIsRefreshing(true);
     try {
-      const response = await fetch("/api/scan-jobs", { cache: "no-store" });
+      const response = await fetch(`/api/scan-jobs?page=${currentPage}&pageSize=${pageSize}`, { cache: "no-store" });
       const data = (await response.json()) as { jobs: ScanRun[] };
       setJobs(data.jobs);
     } finally {
       setIsRefreshing(false);
     }
   }
+
+  const refreshJobsEvent = useEffectEvent(async () => {
+    await refreshJobs();
+  });
 
   async function deleteRunHistory(job: ScanRun) {
     if (!isFinishedStatus(job.status)) {
@@ -152,11 +160,11 @@ export function JobsClient({ initialJobs }: { initialJobs: ScanRun[] }) {
     }
 
     const interval = window.setInterval(() => {
-      void refreshJobs();
+      void refreshJobsEvent();
     }, 4000);
 
     return () => window.clearInterval(interval);
-  }, [jobs]);
+  }, [jobs, currentPage, pageSize]);
 
   return (
     <div className="space-y-4">

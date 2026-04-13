@@ -100,12 +100,9 @@ export function WarehousesClient({ warehouses }: { warehouses: WarehouseRow[] })
 
   return (
     <div className="space-y-4">
-      <Card className="rounded-[28px] bg-card/88">
-        <CardHeader>
-          <CardTitle>Quản lý kho đối chiếu</CardTitle>
-          <CardDescription>
-            Thêm dữ liệu kho:
-          </CardDescription>
+      <Card className="rounded-[28px] bg-card/88 gap-2">
+        <CardHeader className="pb-1">
+          <CardTitle className="font-sans !text-2xl font-semibold tracking-tight text-foreground">Thêm kho đối chiếu</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 lg:grid-cols-[0.7fr_1.5fr_auto]">
           <Input
@@ -127,9 +124,9 @@ export function WarehousesClient({ warehouses }: { warehouses: WarehouseRow[] })
         </CardContent>
       </Card>
 
-      <Card className="rounded-[28px] bg-card/88">
-        <CardHeader>
-          <CardTitle>Danh sách kho</CardTitle>
+      <Card className="rounded-[28px] bg-card/88 gap-2">
+        <CardHeader className="pb-1">
+          <CardTitle className="font-sans !text-2xl font-semibold tracking-tight text-foreground">Danh sách kho</CardTitle>
           <CardDescription>{warehouses.length} kho đang được dùng để đối chiếu.</CardDescription>
         </CardHeader>
         <CardContent>

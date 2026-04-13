@@ -6,6 +6,7 @@ import { authOptions } from "@/lib/auth/auth-options";
 import { resolveAdminFromSessionUser } from "@/lib/auth/admin";
 import { createAndEnqueueScanJobs } from "@/lib/jobs/scan-runner";
 import { listActiveMailboxIds } from "@/lib/mail/service";
+import { paginateArray, parsePageParam } from "@/lib/pagination";
 import { getScanJobsData } from "@/lib/queries/app-data";
 import { prisma } from "@/lib/db/prisma";
 
@@ -14,7 +15,7 @@ const createScanJobSchema = z.object({
   syncWindowDays: z.number().int().positive().max(30).default(7),
 });
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
   const admin = await resolveAdminFromSessionUser(session?.user);
 
@@ -22,8 +23,12 @@ export async function GET() {
     return NextResponse.json({ error: "Không có quyền truy cập." }, { status: 401 });
   }
 
+  const url = new URL(request.url);
+  const page = parsePageParam(url.searchParams.get("page"), 1);
+  const pageSize = Math.min(50, Math.max(1, parsePageParam(url.searchParams.get("pageSize"), 5)));
   const jobs = await getScanJobsData(admin.id);
-  return NextResponse.json({ jobs });
+  const pagedJobs = paginateArray(jobs, page, pageSize);
+  return NextResponse.json({ jobs: pagedJobs.items });
 }
 
 export async function POST(request: Request) {

@@ -13,9 +13,9 @@ export default async function SettingsPage() {
     <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
       <div className="space-y-4">
         {/* Left Column: Profile, System (Interface + Session) */}
-        <Card className="rounded-[28px] bg-card/88">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <Card className="rounded-[28px] bg-card/88 gap-2">
+          <CardHeader className="pb-1">
+            <CardTitle className="flex items-center gap-2 font-sans !text-2xl font-semibold tracking-tight text-foreground">
               <UserCog className="h-5 w-5 text-primary" />
               Tài khoản quản trị
             </CardTitle>
@@ -32,9 +32,9 @@ export default async function SettingsPage() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-[28px] bg-card/88 overflow-hidden">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <Card className="rounded-[28px] bg-card/88 overflow-hidden gap-2">
+          <CardHeader className="pb-1">
+            <CardTitle className="flex items-center gap-2 font-sans !text-2xl font-semibold tracking-tight text-foreground">
               <Building2 className="h-5 w-5 text-primary" />
               Hệ thống
             </CardTitle>
@@ -56,9 +56,9 @@ export default async function SettingsPage() {
 
       <div className="space-y-4">
         {/* Right Column: Totals, Infrastructure info */}
-        <Card className="rounded-[28px] bg-card/88">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <Card className="rounded-[28px] bg-card/88 gap-2">
+          <CardHeader className="pb-1">
+            <CardTitle className="flex items-center gap-2 font-sans !text-2xl font-semibold tracking-tight text-foreground">
               <Database className="h-5 w-5 text-primary" />
               Dữ liệu cục bộ
             </CardTitle>
@@ -83,9 +83,9 @@ export default async function SettingsPage() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-[28px] bg-card/88">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <Card className="rounded-[28px] bg-card/88 gap-2">
+          <CardHeader className="pb-1">
+            <CardTitle className="flex items-center gap-2 font-sans !text-2xl font-semibold tracking-tight text-foreground">
               <ShieldCheck className="h-5 w-5 text-primary" />
               Mô hình token OAuth
             </CardTitle>

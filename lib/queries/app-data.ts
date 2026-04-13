@@ -290,6 +290,11 @@ export async function searchMailToolResults(mailboxIds: string[], filters: Searc
       return result;
     })
     .sort((left, right) => {
+      const timestampCompare = (right.receivedAt?.getTime() ?? 0) - (left.receivedAt?.getTime() ?? 0);
+      if (timestampCompare !== 0) {
+        return timestampCompare;
+      }
+
       const numericCompare = extractNumericSortValue(left.name) - extractNumericSortValue(right.name);
       if (numericCompare !== 0) {
         return numericCompare;

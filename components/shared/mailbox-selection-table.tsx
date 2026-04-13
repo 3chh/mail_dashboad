@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ProviderBadge } from "@/components/shared/provider-badge";
 import { formatDateTime } from "@/lib/utils";
 
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 type MailboxRow = {
   id: string;
