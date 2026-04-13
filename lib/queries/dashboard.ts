@@ -256,7 +256,6 @@ export async function getDashboardData(adminUserId: string) {
         savedCount: true,
       },
       orderBy: { createdAt: "desc" },
-      take: 80,
     }),
     prisma.otpDetection.findMany({
       where: {
@@ -272,7 +271,6 @@ export async function getDashboardData(adminUserId: string) {
         },
       },
       orderBy: { detectedAt: "desc" },
-      take: 20,
     }),
     prisma.orderExtraction.findMany({
       where: {
@@ -288,7 +286,6 @@ export async function getDashboardData(adminUserId: string) {
         },
       },
       orderBy: { receivedAt: "desc" },
-      take: 20,
     }),
     prisma.mailMessage.findMany({
       where: {
