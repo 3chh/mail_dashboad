@@ -33,6 +33,31 @@ export async function GET(request: Request) {
     },
     admin.id,
   );
+  const sortedRows = [...rows].sort((left, right) => {
+    const leftName = left.name?.trim();
+    const rightName = right.name?.trim();
+    const leftMissing = !leftName || leftName === "N/A";
+    const rightMissing = !rightName || rightName === "N/A";
+
+    if (leftMissing && rightMissing) {
+      return left.to.localeCompare(right.to, "vi", { sensitivity: "base", numeric: true });
+    }
+
+    if (leftMissing) {
+      return 1;
+    }
+
+    if (rightMissing) {
+      return -1;
+    }
+
+    const byName = leftName.localeCompare(rightName, "vi", { sensitivity: "base", numeric: true });
+    if (byName !== 0) {
+      return byName;
+    }
+
+    return left.to.localeCompare(right.to, "vi", { sensitivity: "base", numeric: true });
+  });
 
   const header =
     mode === "order"
@@ -42,7 +67,7 @@ export async function GET(request: Request) {
   const workbook = buildExcelWorkbook({
     sheetName: mode === "order" ? "Order Search" : "Body Search",
     headers: header,
-    rows: rows.map((row) =>
+    rows: sortedRows.map((row) =>
       mode === "order"
         ? [row.from, row.name, row.to, row.date, row.warehouse, row.tracking, row.address, row.subject]
         : [row.from, row.name, row.to, row.date, row.subject, row.body],
