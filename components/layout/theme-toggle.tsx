@@ -1,37 +1,20 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 import { Moon, Sun } from "lucide-react";
+import { useTheme } from "next-themes";
 
 type ThemeMode = "light" | "dark";
 
-function resolveInitialTheme(): ThemeMode {
-  if (typeof window === "undefined") {
-    return "light";
-  }
-
-  const stored = window.localStorage.getItem("theme-preference");
-  if (stored === "light" || stored === "dark") {
-    return stored;
-  }
-
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
-
 export function ThemeToggle() {
-  const hydrated = useSyncExternalStore(
+  const { resolvedTheme, setTheme } = useTheme();
+  const mounted = useSyncExternalStore(
     () => () => { },
     () => true,
     () => false,
   );
-  const [theme, setTheme] = useState<ThemeMode>(resolveInitialTheme);
 
-  useEffect(() => {
-    const root = document.documentElement;
-    root.classList.toggle("dark", theme === "dark");
-    window.localStorage.setItem("theme-preference", theme);
-  }, [theme]);
-
+  const theme = (resolvedTheme === "light" || resolvedTheme === "dark" ? resolvedTheme : "dark") as ThemeMode;
   const isDark = theme === "dark";
 
   return (
@@ -39,15 +22,15 @@ export function ThemeToggle() {
       type="button"
       className="control-surface inline-flex h-10 items-center rounded-xl px-3 text-sm font-medium text-foreground transition"
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      aria-label={hydrated ? (isDark ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối") : "Chuyển giao diện"}
-      title={hydrated ? (isDark ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối") : "Chuyển giao diện"}
+      aria-label={mounted ? (isDark ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối") : "Chuyển giao diện"}
+      title={mounted ? (isDark ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối") : "Chuyển giao diện"}
     >
-      {hydrated ? (
+      {mounted ? (
         isDark ? <Sun className="mr-2 h-4 w-4 text-primary" /> : <Moon className="mr-2 h-4 w-4 text-primary" />
       ) : (
         <Moon className="mr-2 h-4 w-4 text-primary" />
       )}
-      {hydrated ? (isDark ? "Sáng" : "Tối") : "Giao diện"}
+      {mounted ? (isDark ? "Sáng" : "Tối") : "Giao diện"}
     </button>
   );
 }
