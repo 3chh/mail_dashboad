@@ -130,7 +130,7 @@ export async function resolveMailboxSelection(adminUserId: string, requestedSele
       selectedMailboxIds = requestedIds;
       break;
     default:
-      selectedMailboxIds = requestedIds.length > 0 ? requestedIds : activeMailboxIds;
+      selectedMailboxIds = requestedIds;
       break;
   }
 

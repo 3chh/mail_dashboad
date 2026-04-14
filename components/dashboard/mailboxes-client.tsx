@@ -839,8 +839,8 @@ export function MailboxesClient({
             </div>
           </div>
 
-          <div className="subpanel-surface rounded-[24px]">
-            <ScrollArea className="h-[560px] rounded-[24px]">
+          <div className="subpanel-surface overflow-hidden rounded-[24px]">
+            <ScrollArea className="h-[560px]">
               <div className="min-w-[1100px] select-none">
                 <Table>
                   <TableHeader className="sticky top-0 z-10 bg-background/90 backdrop-blur-xl [&_tr]:border-b [&_th]:bg-background/90">
@@ -848,7 +848,7 @@ export function MailboxesClient({
                       <TableHead className="w-14 text-center">STT</TableHead>
                       <TableHead className="w-16 text-center">Chọn</TableHead>
                       <TableHead>Email</TableHead>
-                      <TableHead>Tên hiển thị</TableHead>
+                      <TableHead className="text-center">Tên hiển thị</TableHead>
                       <TableHead>Nhóm</TableHead>
                       <TableHead>Nhà cung cấp</TableHead>
                       <TableHead>Trạng thái</TableHead>
@@ -878,7 +878,7 @@ export function MailboxesClient({
                           <TableCell>
                             <div className="font-medium">{mailbox.emailAddress}</div>
                           </TableCell>
-                          <TableCell className="text-muted-foreground">{mailbox.displayName || "-"}</TableCell>
+                          <TableCell className="text-center text-muted-foreground">{mailbox.displayName || "-"}</TableCell>
                           <TableCell>{mailbox.group?.name ?? "All"}</TableCell>
                           <TableCell>
                             <ProviderBadge provider={mailbox.provider} />

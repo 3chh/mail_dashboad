@@ -308,7 +308,7 @@ export function MailboxSelectionTable({
                   <TableHead className="w-12 text-center">STT</TableHead>
                   <TableHead className="w-14 text-center">Chọn</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Tên hiển thị</TableHead>
+                  <TableHead className="text-center">Tên hiển thị</TableHead>
                   <TableHead>Nhóm</TableHead>
                   <TableHead>Nhà cung cấp</TableHead>
                   <TableHead>Last sync</TableHead>
@@ -336,7 +336,7 @@ export function MailboxSelectionTable({
                       <TableCell>
                         <div className="font-medium">{mailbox.emailAddress}</div>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">{mailbox.displayName || "-"}</TableCell>
+                      <TableCell className="text-center text-muted-foreground">{mailbox.displayName || "-"}</TableCell>
                       <TableCell>{mailbox.group?.name ?? "All"}</TableCell>
                       <TableCell>
                         <ProviderBadge provider={mailbox.provider} />
