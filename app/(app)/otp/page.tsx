@@ -21,6 +21,8 @@ export default async function OtpPage({ searchParams }: OtpPageProps) {
   const admin = await getRequiredAdmin();
   const params = await searchParams;
   const page = parsePageParam(params.page, 1);
+  const mailboxSearch = typeof params.mailboxSearch === "string" ? params.mailboxSearch : "";
+  const mailboxProvider = params.mailboxProvider === "GMAIL" || params.mailboxProvider === "OUTLOOK" ? params.mailboxProvider : "ALL";
   const mailboxSelection = parseMailboxSelectionInput({
     selectionMode: params.selectionMode,
     mailboxId: params.mailboxId,
@@ -30,6 +32,8 @@ export default async function OtpPage({ searchParams }: OtpPageProps) {
   const selection = await resolveMailboxSelection(admin.id, mailboxSelection);
   const activeMailboxes = selection.mailboxes.filter((mailbox) => mailbox.status === "ACTIVE");
   const activeMailboxIds = new Set(activeMailboxes.map((mailbox) => mailbox.id));
+  const activeGroupIds = new Set(activeMailboxes.flatMap((mailbox) => (mailbox.group?.id ? [mailbox.group.id] : [])));
+  const mailboxGroup = typeof params.mailboxGroup === "string" && activeGroupIds.has(params.mailboxGroup) ? params.mailboxGroup : "ALL";
   const selectedMailboxIds = selection.selectedMailboxIds.filter((mailboxId) => activeMailboxIds.has(mailboxId));
   const pagedMailboxIds = paginateArray(selectedMailboxIds, page, OTP_PAGE_SIZE);
 
@@ -60,6 +64,9 @@ export default async function OtpPage({ searchParams }: OtpPageProps) {
                 lastSyncedAt: mailbox.lastSyncedAt?.toISOString() ?? null,
               }))}
               selectedMailboxIds={selectedMailboxIds}
+              initialSearchTerm={mailboxSearch}
+              initialProviderFilter={mailboxProvider}
+              initialGroupFilter={mailboxGroup}
               action={(
                 <button
                   type="submit"

@@ -32,22 +32,40 @@ function normalizeMailboxSearch(value: string) {
 export function MailboxSelectionTable({
   mailboxes,
   selectedMailboxIds,
+  initialSearchTerm = "",
+  initialProviderFilter = "ALL",
+  initialGroupFilter = "ALL",
   action,
 }: {
   mailboxes: MailboxRow[];
   selectedMailboxIds: string[];
+  initialSearchTerm?: string;
+  initialProviderFilter?: "ALL" | "GMAIL" | "OUTLOOK";
+  initialGroupFilter?: string;
   action?: ReactNode;
 }) {
   const [selectedIds, setSelectedIds] = useState<string[]>(selectedMailboxIds);
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
   const [dragMode, setDragMode] = useState<DragMode | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [providerFilter, setProviderFilter] = useState<"ALL" | "GMAIL" | "OUTLOOK">("ALL");
-  const [groupFilter, setGroupFilter] = useState<string>("ALL");
+  const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
+  const [providerFilter, setProviderFilter] = useState<"ALL" | "GMAIL" | "OUTLOOK">(initialProviderFilter);
+  const [groupFilter, setGroupFilter] = useState<string>(initialGroupFilter);
 
   useEffect(() => {
     setSelectedIds(selectedMailboxIds);
   }, [selectedMailboxIds]);
+
+  useEffect(() => {
+    setSearchTerm(initialSearchTerm);
+  }, [initialSearchTerm]);
+
+  useEffect(() => {
+    setProviderFilter(initialProviderFilter);
+  }, [initialProviderFilter]);
+
+  useEffect(() => {
+    setGroupFilter(initialGroupFilter);
+  }, [initialGroupFilter]);
 
   useEffect(() => {
     function handleMouseUp() {
@@ -218,6 +236,7 @@ export function MailboxSelectionTable({
         <div className="w-full flex-1 lg:min-w-[240px]">
           <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Tìm kiếm</div>
           <Input
+            name="mailboxSearch"
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
             placeholder="Tìm theo email hoặc tên hiển thị"
@@ -228,7 +247,11 @@ export function MailboxSelectionTable({
         <div className="grid w-full grid-cols-2 gap-2 lg:w-auto lg:flex lg:flex-1 lg:gap-3">
           <div className="lg:min-w-[160px] lg:flex-1">
             <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Nhà cung cấp</div>
-            <Select value={providerFilter} onValueChange={(value) => setProviderFilter((value ?? "ALL") as "ALL" | "GMAIL" | "OUTLOOK")}>
+            <Select
+              name="mailboxProvider"
+              value={providerFilter}
+              onValueChange={(value) => setProviderFilter((value ?? "ALL") as "ALL" | "GMAIL" | "OUTLOOK")}
+            >
               <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm">
                 <SelectValue>{(value) => getProviderFilterLabel(value as string | null)}</SelectValue>
               </SelectTrigger>
@@ -241,7 +264,7 @@ export function MailboxSelectionTable({
           </div>
           <div className="lg:min-w-[140px] lg:flex-1">
             <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Nhóm</div>
-            <Select value={groupFilter} onValueChange={(value) => setGroupFilter(value ?? "ALL")}>
+            <Select name="mailboxGroup" value={groupFilter} onValueChange={(value) => setGroupFilter(value ?? "ALL")}>
               <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm">
                 <SelectValue>{(value) => getGroupFilterLabel(value as string | null)}</SelectValue>
               </SelectTrigger>

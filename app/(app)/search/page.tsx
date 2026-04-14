@@ -32,6 +32,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const lookbackDays = parseLookbackDays(typeof params.lookbackDays === "string" ? params.lookbackDays : undefined, 30);
   const mode = parseSearchMode(typeof params.mode === "string" ? params.mode : undefined);
   const page = parsePageParam(params.page, 1);
+  const mailboxSearch = typeof params.mailboxSearch === "string" ? params.mailboxSearch : "";
+  const mailboxProvider = params.mailboxProvider === "GMAIL" || params.mailboxProvider === "OUTLOOK" ? params.mailboxProvider : "ALL";
   const mailboxSelection = parseMailboxSelectionInput({
     selectionMode: params.selectionMode,
     mailboxId: params.mailboxId,
@@ -41,6 +43,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const selection = await resolveMailboxSelection(admin.id, mailboxSelection);
   const activeMailboxes = selection.mailboxes.filter((mailbox) => mailbox.status === "ACTIVE");
   const activeMailboxIds = new Set(activeMailboxes.map((mailbox) => mailbox.id));
+  const activeGroupIds = new Set(activeMailboxes.flatMap((mailbox) => (mailbox.group?.id ? [mailbox.group.id] : [])));
+  const mailboxGroup = typeof params.mailboxGroup === "string" && activeGroupIds.has(params.mailboxGroup) ? params.mailboxGroup : "ALL";
   const selectedMailboxIds = selection.selectedMailboxIds.filter((mailboxId) => activeMailboxIds.has(mailboxId));
 
   const results =
@@ -110,6 +114,9 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 lastSyncedAt: mailbox.lastSyncedAt?.toISOString() ?? null,
               }))}
               selectedMailboxIds={selectedMailboxIds}
+              initialSearchTerm={mailboxSearch}
+              initialProviderFilter={mailboxProvider}
+              initialGroupFilter={mailboxGroup}
             />
 
             <div className="flex flex-col gap-3">
@@ -167,7 +174,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                     className="control-surface inline-flex h-10 flex-1 items-center justify-center rounded-xl px-4 text-sm font-medium text-foreground whitespace-nowrap lg:px-6"
                   >
                     <Download className="mr-2 h-4 w-4" />
-                    Xuất CSV
+                    Xuất Excel
                   </Link>
                 </div>
               </div>
