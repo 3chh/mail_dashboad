@@ -16,13 +16,13 @@ export async function POST(request: Request) {
   const admin = await resolveAdminFromSessionUser(session?.user);
 
   if (!admin) {
-    return NextResponse.json({ error: "Khong co quyen truy cap." }, { status: 401 });
+    return NextResponse.json({ error: "Không có quyền truy cập." }, { status: 401 });
   }
 
   const parsed = warehouseSchema.safeParse(await request.json());
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "Du lieu kho khong hop le." }, { status: 400 });
+    return NextResponse.json({ error: "Dữ liệu kho không hợp lệ." }, { status: 400 });
   }
 
   const normalizedAddress = normalizeWarehouseAddress(parsed.data.address);

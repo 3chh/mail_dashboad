@@ -72,7 +72,7 @@ export async function DELETE(_request: Request, context: { params: Promise<{ war
   const admin = await requireAdmin();
 
   if (!admin) {
-    return NextResponse.json({ error: "Khong co quyen truy cap." }, { status: 401 });
+    return NextResponse.json({ error: "Không có quyền truy cập." }, { status: 401 });
   }
 
   const { warehouseId } = await context.params;
@@ -84,7 +84,7 @@ export async function DELETE(_request: Request, context: { params: Promise<{ war
   });
 
   if (!warehouse) {
-    return NextResponse.json({ error: "Khong tim thay kho." }, { status: 404 });
+    return NextResponse.json({ error: "Không tìm thấy kho." }, { status: 404 });
   }
 
   await prisma.warehouse.delete({

@@ -34,7 +34,7 @@ export default function RootLayout({
       <body className="min-h-full bg-background text-foreground">
         <Providers>
           <div className="relative min-h-screen overflow-hidden">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(15,118,110,0.14),_transparent_36%),radial-gradient(circle_at_80%_10%,_rgba(245,158,11,0.12),_transparent_26%),linear-gradient(180deg,_rgba(255,255,255,0.96),_rgba(244,247,245,1))] dark:bg-[radial-gradient(circle_at_top_left,_rgba(55,162,173,0.12),_transparent_30%),radial-gradient(circle_at_84%_12%,_rgba(82,127,196,0.08),_transparent_22%),radial-gradient(circle_at_50%_100%,_rgba(7,51,63,0.18),_transparent_42%),linear-gradient(180deg,_rgba(8,14,20,0.98),_rgba(12,18,26,1))]" />
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(15,118,110,0.14),_transparent_36%),radial-gradient(circle_at_80%_10%,_rgba(245,158,11,0.12),_transparent_26%),linear-gradient(180deg,_rgba(255,255,255,0.96),_rgba(244,247,245,1))] dark:bg-[radial-gradient(circle_at_18%_0%,_rgba(118,76,255,0.18),_transparent_32%),radial-gradient(circle_at_86%_8%,_rgba(224,74,255,0.12),_transparent_24%),radial-gradient(circle_at_52%_108%,_rgba(38,111,255,0.16),_transparent_40%),linear-gradient(180deg,_rgba(8,10,24,0.98),_rgba(12,14,32,1))]" />
             <div className="relative">{children}</div>
           </div>
           <Toaster richColors closeButton />
