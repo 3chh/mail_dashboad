@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth-options";
 import { resolveAdminFromSessionUser } from "@/lib/auth/admin";
 import { getOrdersData } from "@/lib/queries/app-data";
-import { parseMultiValueParam, resolveMailboxSelection } from "@/lib/queries/mailbox-filter";
+import { parseMailboxSelectionFromSearchParams, resolveMailboxSelection } from "@/lib/queries/mailbox-filter";
 
 function csvEscape(value: string | number | null | undefined) {
   if (value == null) {
@@ -27,10 +27,7 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const selection = await resolveMailboxSelection(
-    admin.id,
-    parseMultiValueParam(searchParams.getAll("mailboxId")),
-  );
+  const selection = await resolveMailboxSelection(admin.id, parseMailboxSelectionFromSearchParams(searchParams));
 
   const orders = await getOrdersData(selection.selectedMailboxIds, {
     sender: searchParams.get("sender") ?? undefined,

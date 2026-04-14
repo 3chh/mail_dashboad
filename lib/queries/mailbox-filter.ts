@@ -4,6 +4,19 @@ import { parseRequiredKeywords } from "@/lib/mail/query";
 import { compareMailboxesByStatusDisplayNameEmail } from "@/lib/utils";
 
 type SearchParamValue = string | string[] | undefined;
+type MailboxSelectionMode = "all" | "none" | "include" | "exclude";
+
+export type MailboxSelectionInput = {
+  selectionMode?: SearchParamValue;
+  mailboxId?: SearchParamValue;
+  excludeMailboxId?: SearchParamValue;
+};
+
+export type ParsedMailboxSelection = {
+  selectionMode?: MailboxSelectionMode;
+  requestedIds: string[];
+  excludedIds: string[];
+};
 
 export function parseMultiValueParam(value: SearchParamValue) {
   if (!value) {
@@ -17,7 +30,57 @@ export function parseMultiValueParam(value: SearchParamValue) {
   return value.split(",").map((item) => item.trim()).filter(Boolean);
 }
 
-export async function resolveMailboxSelection(adminUserId: string, requestedIds: string[]) {
+function parseMailboxSelectionMode(value: SearchParamValue) {
+  const rawValue = Array.isArray(value) ? value[0] : value;
+
+  if (rawValue === "all" || rawValue === "none" || rawValue === "include" || rawValue === "exclude") {
+    return rawValue;
+  }
+
+  return undefined;
+}
+
+export function parseMailboxSelectionInput(input: MailboxSelectionInput): ParsedMailboxSelection {
+  return {
+    selectionMode: parseMailboxSelectionMode(input.selectionMode),
+    requestedIds: parseMultiValueParam(input.mailboxId),
+    excludedIds: parseMultiValueParam(input.excludeMailboxId),
+  };
+}
+
+export function parseMailboxSelectionFromSearchParams(searchParams: URLSearchParams) {
+  return parseMailboxSelectionInput({
+    selectionMode: searchParams.get("selectionMode") ?? undefined,
+    mailboxId: searchParams.getAll("mailboxId"),
+    excludeMailboxId: searchParams.getAll("excludeMailboxId"),
+  });
+}
+
+export function appendMailboxSelectionParams(searchParams: URLSearchParams, selection: ParsedMailboxSelection) {
+  const effectiveMode =
+    selection.selectionMode ??
+    (selection.excludedIds.length > 0 ? "exclude" : selection.requestedIds.length > 0 ? "include" : undefined);
+
+  if (!effectiveMode) {
+    return;
+  }
+
+  searchParams.set("selectionMode", effectiveMode);
+
+  if (effectiveMode === "include") {
+    for (const mailboxId of selection.requestedIds) {
+      searchParams.append("mailboxId", mailboxId);
+    }
+  }
+
+  if (effectiveMode === "exclude") {
+    for (const mailboxId of selection.excludedIds) {
+      searchParams.append("excludeMailboxId", mailboxId);
+    }
+  }
+}
+
+export async function resolveMailboxSelection(adminUserId: string, requestedSelection: ParsedMailboxSelection) {
   const mailboxes = await prisma.mailbox.findMany({
     where: {
       status: {
@@ -46,10 +109,30 @@ export async function resolveMailboxSelection(adminUserId: string, requestedIds:
   mailboxes.sort(compareMailboxesByStatusDisplayNameEmail);
 
   const availableIds = new Set(mailboxes.map((mailbox) => mailbox.id));
-  const selectedMailboxIds =
-    requestedIds.length > 0
-      ? requestedIds.filter((id) => availableIds.has(id))
-      : mailboxes.filter((mailbox) => mailbox.status === MailboxStatus.ACTIVE).map((mailbox) => mailbox.id);
+  const activeMailboxIds = mailboxes.filter((mailbox) => mailbox.status === MailboxStatus.ACTIVE).map((mailbox) => mailbox.id);
+  const activeMailboxIdSet = new Set(activeMailboxIds);
+  const requestedIds = requestedSelection.requestedIds.filter((id) => availableIds.has(id));
+  const excludedIds = new Set(requestedSelection.excludedIds.filter((id) => activeMailboxIdSet.has(id)));
+
+  let selectedMailboxIds: string[];
+
+  switch (requestedSelection.selectionMode) {
+    case "none":
+      selectedMailboxIds = [];
+      break;
+    case "all":
+      selectedMailboxIds = activeMailboxIds;
+      break;
+    case "exclude":
+      selectedMailboxIds = activeMailboxIds.filter((mailboxId) => !excludedIds.has(mailboxId));
+      break;
+    case "include":
+      selectedMailboxIds = requestedIds;
+      break;
+    default:
+      selectedMailboxIds = requestedIds.length > 0 ? requestedIds : activeMailboxIds;
+      break;
+  }
 
   return {
     mailboxes,
@@ -96,23 +179,23 @@ export function buildMessageWhereClause(args: {
     receivedAt: buildReceivedAtRange(args),
     OR: args.sender
       ? [
-          { fromHeader: { contains: args.sender } },
-          { fromEmail: { contains: args.sender } },
-          { fromName: { contains: args.sender } },
-        ]
+        { fromHeader: { contains: args.sender } },
+        { fromEmail: { contains: args.sender } },
+        { fromName: { contains: args.sender } },
+      ]
       : undefined,
     hasAttachments: args.withAttachments ? true : undefined,
     labels: args.unreadOnly ? { contains: "UNREAD" } : undefined,
     AND:
       requiredKeywords.length > 0
         ? requiredKeywords.map((keyword) => ({
-            OR: [
-              { subject: { contains: keyword } },
-              { plainTextBody: { contains: keyword } },
-              { normalizedText: { contains: keyword } },
-              { snippet: { contains: keyword } },
-            ],
-          }))
+          OR: [
+            { subject: { contains: keyword } },
+            { plainTextBody: { contains: keyword } },
+            { normalizedText: { contains: keyword } },
+            { snippet: { contains: keyword } },
+          ],
+        }))
         : undefined,
   };
 }

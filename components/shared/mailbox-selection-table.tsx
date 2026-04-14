@@ -185,9 +185,33 @@ export function MailboxSelectionTable({
 
   return (
     <div className="min-w-0 space-y-3">
-      {selectedIds.map((mailboxId) => (
-        <input key={mailboxId} type="hidden" name="mailboxId" value={mailboxId} />
-      ))}
+      {(() => {
+        if (selectedIds.length === 0) {
+          return <input type="hidden" name="selectionMode" value="none" />;
+        }
+
+        if (selectedIds.length === mailboxes.length) {
+          return <input type="hidden" name="selectionMode" value="all" />;
+        }
+
+        if (selectedIds.length > mailboxes.length / 2) {
+          const unselectedIds = mailboxes.map((mailbox) => mailbox.id).filter((id) => !selectedIds.includes(id));
+
+          return (
+            <>
+              <input type="hidden" name="selectionMode" value="exclude" />
+              <input type="hidden" name="excludeMailboxId" value={unselectedIds.join(",")} />
+            </>
+          );
+        }
+
+        return (
+          <>
+            <input type="hidden" name="selectionMode" value="include" />
+            <input type="hidden" name="mailboxId" value={selectedIds.join(",")} />
+          </>
+        );
+      })()}
       {/* Filters: Responsive flex layout that wraps on desktop, stacks on mobile */}
       <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end">
         {/* Search input: flexible width */}

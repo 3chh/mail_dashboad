@@ -10,7 +10,7 @@ import { MailboxSelectionTable } from "@/components/shared/mailbox-selection-tab
 import { buildLocalSearchSummary, parseLookbackDays, parseSearchMode } from "@/lib/mail/query";
 import { createSearchParams, paginateArray, parsePageParam } from "@/lib/pagination";
 import { searchMailToolResults } from "@/lib/queries/app-data";
-import { parseMultiValueParam, resolveMailboxSelection } from "@/lib/queries/mailbox-filter";
+import { appendMailboxSelectionParams, parseMailboxSelectionInput, resolveMailboxSelection } from "@/lib/queries/mailbox-filter";
 import { formatDateTime, truncate } from "@/lib/utils";
 
 type SearchPageProps = {
@@ -32,8 +32,13 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const lookbackDays = parseLookbackDays(typeof params.lookbackDays === "string" ? params.lookbackDays : undefined, 30);
   const mode = parseSearchMode(typeof params.mode === "string" ? params.mode : undefined);
   const page = parsePageParam(params.page, 1);
+  const mailboxSelection = parseMailboxSelectionInput({
+    selectionMode: params.selectionMode,
+    mailboxId: params.mailboxId,
+    excludeMailboxId: params.excludeMailboxId,
+  });
 
-  const selection = await resolveMailboxSelection(admin.id, parseMultiValueParam(params.mailboxId));
+  const selection = await resolveMailboxSelection(admin.id, mailboxSelection);
   const activeMailboxes = selection.mailboxes.filter((mailbox) => mailbox.status === "ACTIVE");
   const activeMailboxIds = new Set(activeMailboxes.map((mailbox) => mailbox.id));
   const selectedMailboxIds = selection.selectedMailboxIds.filter((mailboxId) => activeMailboxIds.has(mailboxId));
@@ -76,9 +81,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   if (dateTo) exportParams.set("dateTo", dateTo);
   if (unreadOnly) exportParams.set("unreadOnly", "true");
   if (withAttachments) exportParams.set("withAttachments", "true");
-  for (const mailboxId of selectedMailboxIds) {
-    exportParams.append("mailboxId", mailboxId);
-  }
+  appendMailboxSelectionParams(exportParams, mailboxSelection);
 
   const pagedResults = paginateArray(results, page, SEARCH_PAGE_SIZE);
 

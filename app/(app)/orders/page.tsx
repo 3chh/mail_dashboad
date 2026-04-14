@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { appendMailboxSelectionParams, parseMailboxSelectionInput } from "@/lib/queries/mailbox-filter";
 
 type OrdersPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -23,8 +24,15 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
   const incoming = await searchParams;
   const params = new URLSearchParams();
   params.set("mode", "order");
+  appendMailboxSelectionParams(
+    params,
+    parseMailboxSelectionInput({
+      selectionMode: incoming.selectionMode,
+      mailboxId: incoming.mailboxId,
+      excludeMailboxId: incoming.excludeMailboxId,
+    }),
+  );
 
-  appendParam(params, "mailboxId", incoming.mailboxId);
   appendParam(params, "keyword", incoming.keyword);
   appendParam(params, "sender", incoming.sender);
   appendParam(params, "dateFrom", incoming.dateFrom);

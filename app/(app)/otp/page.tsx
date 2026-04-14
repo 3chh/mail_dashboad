@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createSearchParams, paginateArray, parsePageParam } from "@/lib/pagination";
 import { getOtpMonitorData } from "@/lib/queries/app-data";
-import { parseMultiValueParam, resolveMailboxSelection } from "@/lib/queries/mailbox-filter";
+import { parseMailboxSelectionInput, resolveMailboxSelection } from "@/lib/queries/mailbox-filter";
 import { formatDateTime, truncate } from "@/lib/utils";
 
 type OtpPageProps = {
@@ -21,8 +21,13 @@ export default async function OtpPage({ searchParams }: OtpPageProps) {
   const admin = await getRequiredAdmin();
   const params = await searchParams;
   const page = parsePageParam(params.page, 1);
+  const mailboxSelection = parseMailboxSelectionInput({
+    selectionMode: params.selectionMode,
+    mailboxId: params.mailboxId,
+    excludeMailboxId: params.excludeMailboxId,
+  });
 
-  const selection = await resolveMailboxSelection(admin.id, parseMultiValueParam(params.mailboxId));
+  const selection = await resolveMailboxSelection(admin.id, mailboxSelection);
   const activeMailboxes = selection.mailboxes.filter((mailbox) => mailbox.status === "ACTIVE");
   const activeMailboxIds = new Set(activeMailboxes.map((mailbox) => mailbox.id));
   const selectedMailboxIds = selection.selectedMailboxIds.filter((mailboxId) => activeMailboxIds.has(mailboxId));
