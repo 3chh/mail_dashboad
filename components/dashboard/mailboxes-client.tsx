@@ -843,7 +843,7 @@ export function MailboxesClient({
             <ScrollArea className="h-[560px]">
               <div className="min-w-[1100px] select-none">
                 <Table>
-                  <TableHeader className="sticky top-0 z-10 bg-background/90 backdrop-blur-xl [&_tr]:border-b [&_th]:bg-background/90">
+                  <TableHeader className="sticky top-0 z-10 bg-background/90 backdrop-blur-xl [&_th]:border-b [&_th]:bg-background/90">
                     <TableRow>
                       <TableHead className="w-14 text-center">STT</TableHead>
                       <TableHead className="w-16 text-center">Chọn</TableHead>

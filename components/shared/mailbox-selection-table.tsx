@@ -303,7 +303,7 @@ export function MailboxSelectionTable({
         <ScrollArea className="h-[360px] no-scrollbar">
           <div className="min-w-[640px] select-none">
             <Table>
-              <TableHeader className="sticky top-0 z-10 bg-background/90 backdrop-blur-xl [&_tr]:border-b [&_th]:bg-background/90">
+              <TableHeader className="sticky top-0 z-10 bg-background/90 backdrop-blur-xl [&_th]:border-b [&_th]:bg-background/90">
                 <TableRow>
                   <TableHead className="w-12 text-center">STT</TableHead>
                   <TableHead className="w-14 text-center">Chọn</TableHead>

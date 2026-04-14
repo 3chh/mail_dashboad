@@ -12,7 +12,7 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
     >
       <table
         data-slot="table"
-        className={cn("w-full caption-bottom text-sm", className)}
+        className={cn("w-full border-separate border-spacing-0 caption-bottom text-sm", className)}
         {...props}
       />
     </div>
@@ -24,7 +24,7 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
     <thead
       data-slot="table-header"
       className={cn(
-        "bg-[linear-gradient(90deg,rgba(17,24,39,0.72),rgba(17,24,39,0.6),rgba(17,24,39,0.5))] dark:bg-[linear-gradient(90deg,rgba(168,85,247,0.16),rgba(99,102,241,0.12),rgba(15,23,42,0.08))] [&_tr]:border-b [&_tr]:border-border/70 dark:[&_tr]:border-white/10",
+        "rounded-t-[24px] bg-[linear-gradient(90deg,rgba(17,24,39,0.72),rgba(17,24,39,0.6),rgba(17,24,39,0.5))] dark:bg-[linear-gradient(90deg,rgba(168,85,247,0.16),rgba(99,102,241,0.12),rgba(15,23,42,0.08))] [&_th]:border-b [&_th]:border-border/70 dark:[&_th]:border-white/10",
         className
       )}
       {...props}
@@ -36,7 +36,7 @@ function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
   return (
     <tbody
       data-slot="table-body"
-      className={cn("[&_tr:last-child]:border-0", className)}
+      className={cn("[&_tr:last-child_td]:border-0", className)}
       {...props}
     />
   )
@@ -47,7 +47,7 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
     <tfoot
       data-slot="table-footer"
       className={cn(
-        "border-t border-border/70 bg-background/55 font-medium [&>tr]:last:border-b-0",
+        "border-border/70 bg-background/55 font-medium [&>tr>td]:border-t [&>tr:last-child>td]:border-b-0",
         className
       )}
       {...props}
@@ -60,7 +60,7 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
     <tr
       data-slot="table-row"
       className={cn(
-        "border-b border-border/70 transition-colors hover:bg-accent/45 data-[state=selected]:bg-[color:var(--primary-soft)]",
+        "transition-colors hover:bg-accent/45 data-[state=selected]:bg-[color:var(--primary-soft)] [&_td]:border-b [&_td]:border-border/70",
         className
       )}
       {...props}
@@ -73,7 +73,7 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
     <th
       data-slot="table-head"
       className={cn(
-        "h-11 px-4 text-left align-middle font-semibold whitespace-nowrap text-foreground/96 [&:has([role=checkbox])]:pr-0",
+        "h-11 px-4 text-left align-middle font-semibold whitespace-nowrap text-foreground/96 [&:has([role=checkbox])]:pr-0 first:rounded-tl-[24px] last:rounded-tr-[24px]",
         className
       )}
       {...props}
