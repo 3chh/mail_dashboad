@@ -57,7 +57,7 @@ model MailboxGroup {
 
 model Warehouse {
   id                String     @id @default(cuid())
-  name              String     @unique
+  name              String
   address           String
   normalizedAddress String
   createdById       String?
@@ -67,6 +67,7 @@ model Warehouse {
 
   @@index([createdById, name])
   @@index([normalizedAddress])
+  @@unique([name, normalizedAddress])
 }
 
 model AdminUser {

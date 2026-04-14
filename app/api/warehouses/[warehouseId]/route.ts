@@ -20,14 +20,14 @@ export async function PATCH(request: Request, context: { params: Promise<{ wareh
   const admin = await requireAdmin();
 
   if (!admin) {
-    return NextResponse.json({ error: "Không có quyền truy cập." }, { status: 401 });
+    return NextResponse.json({ error: "Khong co quyen truy cap." }, { status: 401 });
   }
 
   const { warehouseId } = await context.params;
   const parsed = updateWarehouseSchema.safeParse(await request.json());
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "Dữ liệu kho không hợp lệ." }, { status: 400 });
+    return NextResponse.json({ error: "Du lieu kho khong hop le." }, { status: 400 });
   }
 
   const warehouse = await prisma.warehouse.findFirst({
@@ -38,7 +38,20 @@ export async function PATCH(request: Request, context: { params: Promise<{ wareh
   });
 
   if (!warehouse) {
-    return NextResponse.json({ error: "Không tìm thấy kho." }, { status: 404 });
+    return NextResponse.json({ error: "Khong tim thay kho." }, { status: 404 });
+  }
+
+  const normalizedAddress = normalizeWarehouseAddress(parsed.data.address);
+  const duplicateWarehouse = await prisma.warehouse.findFirst({
+    where: {
+      NOT: { id: warehouseId },
+      name: parsed.data.name,
+      normalizedAddress,
+    },
+  });
+
+  if (duplicateWarehouse) {
+    return NextResponse.json({ error: "Kho nay da ton tai voi cung ten va dia chi." }, { status: 409 });
   }
 
   const updated = await prisma.warehouse.update({
@@ -48,7 +61,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ wareh
     data: {
       name: parsed.data.name,
       address: parsed.data.address,
-      normalizedAddress: normalizeWarehouseAddress(parsed.data.address),
+      normalizedAddress,
     },
   });
 
@@ -59,7 +72,7 @@ export async function DELETE(_request: Request, context: { params: Promise<{ war
   const admin = await requireAdmin();
 
   if (!admin) {
-    return NextResponse.json({ error: "Không có quyền truy cập." }, { status: 401 });
+    return NextResponse.json({ error: "Khong co quyen truy cap." }, { status: 401 });
   }
 
   const { warehouseId } = await context.params;
@@ -71,7 +84,7 @@ export async function DELETE(_request: Request, context: { params: Promise<{ war
   });
 
   if (!warehouse) {
-    return NextResponse.json({ error: "Không tìm thấy kho." }, { status: 404 });
+    return NextResponse.json({ error: "Khong tim thay kho." }, { status: 404 });
   }
 
   await prisma.warehouse.delete({
