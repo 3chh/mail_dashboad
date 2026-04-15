@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,6 +10,8 @@ import { ProviderBadge } from "@/components/shared/provider-badge";
 import { formatDateTime } from "@/lib/utils";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
+
+const OTP_CLEAR_SELECTION_FLAG = "otp-clear-mailbox-selection";
 
 type MailboxRow = {
   id: string;
@@ -36,6 +38,7 @@ export function MailboxSelectionTable({
   initialProviderFilter = "ALL",
   initialGroupFilter = "ALL",
   action,
+  clearSelectionOnSubmit = false,
 }: {
   mailboxes: MailboxRow[];
   selectedMailboxIds: string[];
@@ -43,6 +46,7 @@ export function MailboxSelectionTable({
   initialProviderFilter?: "ALL" | "GMAIL" | "OUTLOOK";
   initialGroupFilter?: string;
   action?: ReactNode;
+  clearSelectionOnSubmit?: boolean;
 }) {
   const [selectedIds, setSelectedIds] = useState<string[]>(selectedMailboxIds);
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
@@ -50,8 +54,29 @@ export function MailboxSelectionTable({
   const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
   const [providerFilter, setProviderFilter] = useState<"ALL" | "GMAIL" | "OUTLOOK">(initialProviderFilter);
   const [groupFilter, setGroupFilter] = useState<string>(initialGroupFilter);
+  const skipHydrateSelectionRef = useRef(false);
 
   useEffect(() => {
+    if (!clearSelectionOnSubmit || typeof window === "undefined") {
+      return;
+    }
+
+    if (window.sessionStorage.getItem(OTP_CLEAR_SELECTION_FLAG) !== "1") {
+      return;
+    }
+
+    window.sessionStorage.removeItem(OTP_CLEAR_SELECTION_FLAG);
+    skipHydrateSelectionRef.current = true;
+    setSelectedIds([]);
+    setLastSelectedIndex(null);
+    setDragMode(null);
+  }, [clearSelectionOnSubmit]);
+
+  useEffect(() => {
+    if (skipHydrateSelectionRef.current) {
+      return;
+    }
+
     setSelectedIds(selectedMailboxIds);
   }, [selectedMailboxIds]);
 
@@ -202,7 +227,26 @@ export function MailboxSelectionTable({
   }
 
   return (
-    <div className="min-w-0 space-y-3">
+    <div
+      className="min-w-0 space-y-3"
+      onClickCapture={(event) => {
+        if (!clearSelectionOnSubmit || typeof window === "undefined" || selectedIds.length === 0) {
+          return;
+        }
+
+        const target = event.target;
+        if (!(target instanceof Element)) {
+          return;
+        }
+
+        const submitTrigger = target.closest("button[type='submit'], input[type='submit']");
+        if (!submitTrigger) {
+          return;
+        }
+
+        window.sessionStorage.setItem(OTP_CLEAR_SELECTION_FLAG, "1");
+      }}
+    >
       {(() => {
         if (selectedIds.length === 0) {
           return <input type="hidden" name="selectionMode" value="none" />;

@@ -67,6 +67,7 @@ export default async function OtpPage({ searchParams }: OtpPageProps) {
               initialSearchTerm={mailboxSearch}
               initialProviderFilter={mailboxProvider}
               initialGroupFilter={mailboxGroup}
+              clearSelectionOnSubmit
               action={(
                 <button
                   type="submit"

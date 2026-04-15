@@ -1,4 +1,5 @@
 import type { ScanJobStatus } from "@prisma/client";
+import { convert } from "html-to-text";
 import { prisma } from "@/lib/db/prisma";
 import { extractOtpCandidates } from "@/lib/extractors/otp";
 import { fetchLatestMessageForMailbox } from "@/lib/mail/service";
@@ -75,6 +76,26 @@ function extractFromAddress(fromEmail: string | null, fromHeader: string | null)
 
 function resolveOtpSourceText(message: NormalizedMailMessage) {
   return (message.normalizedText || message.plainTextBody || message.snippet || "").trim();
+}
+
+function resolveOrderSourceText(message: {
+  plainTextBody: string | null;
+  htmlBody: string | null;
+  normalizedText: string | null;
+  snippet: string | null;
+}) {
+  if (message.plainTextBody?.trim()) {
+    return message.plainTextBody.trim();
+  }
+
+  if (message.htmlBody?.trim()) {
+    return convert(message.htmlBody, {
+      wordwrap: false,
+      selectors: [{ selector: "a", options: { hideLinkHrefIfSameAsText: true } }],
+    }).trim();
+  }
+
+  return (message.normalizedText || message.snippet || "").trim();
 }
 
 export async function getOtpMonitorData(mailboxIds: string[]) {
@@ -221,6 +242,7 @@ export async function searchMailToolResults(mailboxIds: string[], filters: Searc
             snippet: true,
             receivedAt: true,
             plainTextBody: true,
+            htmlBody: true,
             normalizedText: true,
             hasAttachments: true,
             labels: true,
@@ -258,7 +280,10 @@ export async function searchMailToolResults(mailboxIds: string[], filters: Searc
       ),
     )
     .map((message) => {
-      const body = (message.plainTextBody || message.normalizedText || message.snippet || "").trim();
+      const body =
+        mode === "order"
+          ? resolveOrderSourceText(message)
+          : (message.plainTextBody || message.normalizedText || message.snippet || "").trim();
       const warehouseMatch =
         mode === "order"
           ? resolveWarehouseMatch(body, warehouses)

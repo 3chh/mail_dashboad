@@ -1,0 +1,151 @@
+import os
+import mailbox
+import email
+import re
+import difflib
+from email.header import decode_header
+from datetime import datetime, timedelta
+from openpyxl import Workbook, load_workbook
+
+# --- 1. HÀM HỖ TRỢ HỆ THỐNG ---
+def get_labels_from_excel(excel_path):
+    label_map, warehouse_map = {}, {}
+    if not os.path.exists(excel_path): return label_map, warehouse_map
+    try:
+        wb = load_workbook(excel_path, data_only=True)
+        ws = wb.active
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            mail_val = str(row[1]).lower().strip() if row[1] is not None else ""
+            if mail_val: label_map[mail_val] = str(row[0]) if row[0] is not None else ""
+            wh_name, addr_ref = row[3], row[4]
+            if wh_name and addr_ref: warehouse_map[str(addr_ref)] = str(wh_name)
+    except: pass
+    return label_map, warehouse_map
+
+def decode_mime(value):
+    if not value: return ""
+    try:
+        parts = decode_header(value)
+        return "".join([part.decode(enc or "utf-8", errors="ignore") if isinstance(part, bytes) else part for part, enc in parts])
+    except: return str(value)
+
+def get_body(message):
+    body = ""
+    try:
+        if message.is_multipart():
+            for part in message.walk():
+                if part.get_content_type() in ["text/plain", "text/html"]:
+                    payload = part.get_payload(decode=True)
+                    if payload: body += payload.decode("utf-8", errors="ignore") + "\n"
+        else:
+            payload = message.get_payload(decode=True)
+            if payload: body = payload.decode("utf-8", errors="ignore")
+    except: pass
+    return body
+
+def extract_order_info(body, warehouse_map):
+    tracking_val, address_val, warehouse_assigned = "N/A", "N/A", "N/A"
+    track_match = re.search(r'【送り状番号】\s*(\d{12})', body)
+    tracking_val = track_match.group(1) if track_match else (re.search(r'\d{12}', body).group(0) if re.search(r'\d{12}', body) else "N/A")
+    lines = body.split('\n')
+    for i, line in enumerate(lines):
+        if "〒" in line:
+            addr_part1 = line.strip()
+            addr_part2 = (" " + lines[i+1].strip()) if (i+1 < len(lines) and lines[i+1].strip() and "【" not in lines[i+1]) else ""
+            address_val = addr_part1 + addr_part2
+            if warehouse_map:
+                best_score, best_wh = -1, "N/A"
+                clean_mail_addr = re.sub(r'\s+', '', address_val)
+                for ref_addr, wh_name in warehouse_map.items():
+                    score = difflib.SequenceMatcher(None, re.sub(r'\s+', '', ref_addr), clean_mail_addr).ratio()
+                    if score > best_score: best_score, best_wh = score, wh_name
+                warehouse_assigned = best_wh
+            break
+    return tracking_val, address_val, warehouse_assigned
+
+# --- 2. LUỒNG CHẠY CHÍNH ---
+def run_tool():
+    print("\n" + "="*60); print("        TOOL QUẢN LÝ MAIL THUNDERBIRD V8.6 (SILENT)"); print("="*60)
+    mode = input(">> Chế độ (1: Body, 2: Đơn hàng): ").strip()
+    raw_input = input(">> Keywords (ngăn cách bằng /): ")
+    required_keywords = [k.strip().lower() for k in raw_input.split("/") if k.strip()]
+    if not required_keywords: return
+    try: days = int(input(">> Số ngày quét: "))
+    except: days = 30 
+    limit_date = datetime.now() - timedelta(days=days)
+    
+    excel_file = r"C:\Users\ngo35\Desktop\MailTool - Copy\File Mail - Copy.xlsx"
+    profile = r"C:\Users\ngo35\AppData\Roaming\Thunderbird\Profiles\yas9icl4.default-release"
+    
+    labels_map, warehouse_map = get_labels_from_excel(excel_file)
+    processed_emails, results = set(), []
+    
+    print(f"[*] Đang thực hiện quét ngầm. Vui lòng đợi...")
+
+    if os.path.exists(profile):
+        for sub in ["ImapMail", "Mail"]:
+            root = os.path.join(profile, sub)
+            if not os.path.exists(root): continue
+            for path, dirs, files in os.walk(root):
+                for file in files:
+                    # Bỏ qua các file rác
+                    if file.endswith((".msf", ".dat", ".json", ".sqlite")) or os.path.getsize(os.path.join(path, file)) == 0:
+                        continue
+                    try:
+                        mbox = mailbox.mbox(os.path.join(path, file))
+                        for msg in mbox:
+                            try:
+                                to_addr = (msg.get("To", "") or "").lower().strip()
+                                # Lọc trùng
+                                if not to_addr or to_addr in processed_emails: continue
+                                
+                                date_raw = msg.get("Date")
+                                date_obj = email.utils.parsedate_to_datetime(date_raw)
+                                if date_obj.tzinfo: date_obj = date_obj.replace(tzinfo=None)
+                                
+                                if date_obj >= limit_date:
+                                    subject = decode_mime(msg.get("Subject", ""))
+                                    body = get_body(msg)
+                                    if all(k in (subject + body).lower() for k in required_keywords):
+                                        name = labels_map.get(to_addr, "N/A")
+                                        res_item = {
+                                            "from": email.utils.parseaddr(msg.get("From", ""))[1], 
+                                            "name": name, "to": to_addr, 
+                                            "date": date_obj.strftime("%Y-%m-%d %H:%M:%S"), 
+                                            "subject": subject
+                                        }
+                                        if mode == "2":
+                                            track, addr, wh = extract_order_info(body, warehouse_map)
+                                            res_item.update({"tracking": track, "address": addr, "warehouse": wh})
+                                        else: res_item["body"] = body
+                                            
+                                        results.append(res_item)
+                                        processed_emails.add(to_addr)
+                                        # ĐÃ XÓA DÒNG PRINT TẠI ĐÂY - CHẠY TRONG IM LẶNG
+                            except: continue
+                    except: continue
+
+        print(f"\n[*] HOÀN TẤT! Đã tìm thấy {len(results)} kết quả duy nhất.")
+        
+        # Sắp xếp kết quả
+        results.sort(key=lambda x: int(re.findall(r'\d+', str(x["name"]))[0]) if re.findall(r'\d+', str(x["name"])) else 9999)
+        
+        # Xuất file Excel
+        wb_out = Workbook(); ws_out = wb_out.active
+        cols = ["FROM", "NAME", "TO", "DATE", "WAREHOUSE", "TRACKING", "ADDRESS", "SUBJECT"] if mode == "2" else ["FROM", "NAME", "TO", "DATE", "SUBJECT", "BODY"]
+        ws_out.append(cols)
+        for r in results: ws_out.append([r.get(c.lower()) for c in cols])
+        
+        out_name = f"KetQua_{datetime.now().strftime('%H%M%S')}.xlsx"
+        wb_out.save(out_name)
+        print(f"✅ File đã được lưu: {out_name}")
+        os.startfile(out_name)
+    else:
+        print("❌ Lỗi: Không tìm thấy Profile Thunderbird!")
+
+if __name__ == "__main__":
+    while True:
+        run_tool()
+        print("-" * 40)
+        if input(">> Tiếp tục quét từ khóa khác? (y/n): ").strip().lower() != 'y':
+            break

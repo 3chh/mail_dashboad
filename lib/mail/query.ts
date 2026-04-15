@@ -1,5 +1,3 @@
-import { extractPostalCode, normalizeWarehouseAddress } from "@/lib/utils";
-
 type LocalSearchInput = {
   keyword?: string;
   sender?: string;
@@ -125,43 +123,36 @@ function shouldAppendNextAddressLine(line: string | undefined) {
     return false;
   }
 
-  return !/^(\u3010|\[|tracking|\u9001\u308a\u72b6|order|invoice|subject|\u4ef6\u540d)/i.test(normalized) && normalized.length <= 120;
+  return !normalized.includes("\u3010");
+}
+
+function compactWhitespaceOnly(value: string) {
+  return value.replace(/〒/g, "").replace(/\s+/g, "");
 }
 
 export function extractAddressCandidates(bodyText: string) {
-  const lines = bodyText
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  const candidates: string[] = [];
-  const seen = new Set<string>();
+  const lines = bodyText.split(/\r?\n/);
 
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index]!;
-    const looksLikePostalLine = line.includes("\u3012") || /\b\d{3}-\d{4}\b/.test(line) || /\b\d{7}\b/.test(line);
-
-    if (!looksLikePostalLine) {
+    if (!line.includes("\u3012")) {
       continue;
     }
 
-    const nextLine = lines[index + 1];
-    const combined = `${line}${shouldAppendNextAddressLine(nextLine) ? ` ${nextLine}` : ""}`.trim();
+    const trimmedLine = line.trim();
+    const postalIndex = trimmedLine.indexOf("\u3012");
+    const addressLine = trimmedLine
+      .slice(postalIndex >= 0 ? postalIndex + 1 : 0)
+      .trim();
+    const nextLine = lines[index + 1]?.trim();
+    const combined = `${addressLine}${shouldAppendNextAddressLine(nextLine) ? ` ${nextLine}` : ""}`.trim();
 
-    if (!seen.has(combined)) {
-      seen.add(combined);
-      candidates.push(combined);
+    if (combined) {
+      return [combined];
     }
   }
 
-  if (candidates.length === 0) {
-    const fallback = lines.find((line) => /\b\d{3}-\d{4}\b/.test(line) || /\b\d{7}\b/.test(line));
-    if (fallback) {
-      candidates.push(fallback.trim());
-    }
-  }
-
-  return candidates;
+  return [];
 }
 
 export function extractAddressLine(bodyText: string) {
@@ -169,73 +160,74 @@ export function extractAddressLine(bodyText: string) {
   return candidates[0] ?? "N/A";
 }
 
-function buildCharacterBigrams(value: string) {
-  if (value.length <= 1) {
-    return [value];
+function findLongestCommonBlock(left: string, right: string) {
+  let bestLeft = 0;
+  let bestRight = 0;
+  let bestSize = 0;
+  const rows = new Array<number>(right.length + 1).fill(0);
+
+  for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
+    for (let rightIndex = right.length; rightIndex >= 1; rightIndex -= 1) {
+      if (left[leftIndex - 1] === right[rightIndex - 1]) {
+        rows[rightIndex] = rows[rightIndex - 1] + 1;
+        if (rows[rightIndex] > bestSize) {
+          bestSize = rows[rightIndex];
+          bestLeft = leftIndex - bestSize;
+          bestRight = rightIndex - bestSize;
+        }
+      } else {
+        rows[rightIndex] = 0;
+      }
+    }
   }
 
-  const bigrams: string[] = [];
-  for (let index = 0; index < value.length - 1; index += 1) {
-    bigrams.push(value.slice(index, index + 2));
-  }
-  return bigrams;
+  return { bestLeft, bestRight, bestSize };
 }
 
-function calculateDiceSimilarity(left: string, right: string) {
+function calculateSequenceMatcherRatio(left: string, right: string): number {
   if (!left || !right) {
     return 0;
   }
 
-  if (left === right) {
-    return 1;
-  }
+  const stack: Array<{ left: string; right: string }> = [{ left, right }];
+  let matches = 0;
 
-  if (left.includes(right) || right.includes(left)) {
-    return 0.96;
-  }
+  while (stack.length > 0) {
+    const current = stack.pop()!;
+    const block = findLongestCommonBlock(current.left, current.right);
 
-  const leftBigrams = buildCharacterBigrams(left);
-  const rightBigrams = buildCharacterBigrams(right);
-  const counts = new Map<string, number>();
+    if (block.bestSize === 0) {
+      continue;
+    }
 
-  for (const item of leftBigrams) {
-    counts.set(item, (counts.get(item) ?? 0) + 1);
-  }
+    matches += block.bestSize;
 
-  let intersection = 0;
-  for (const item of rightBigrams) {
-    const count = counts.get(item) ?? 0;
-    if (count > 0) {
-      intersection += 1;
-      counts.set(item, count - 1);
+    const leftBefore = current.left.slice(0, block.bestLeft);
+    const rightBefore = current.right.slice(0, block.bestRight);
+    const leftAfter = current.left.slice(block.bestLeft + block.bestSize);
+    const rightAfter = current.right.slice(block.bestRight + block.bestSize);
+
+    if (leftBefore && rightBefore) {
+      stack.push({ left: leftBefore, right: rightBefore });
+    }
+
+    if (leftAfter && rightAfter) {
+      stack.push({ left: leftAfter, right: rightAfter });
     }
   }
 
-  return (2 * intersection) / (leftBigrams.length + rightBigrams.length);
+  return (2 * matches) / (left.length + right.length);
 }
 
 function scoreWarehouseMatch(candidateAddress: string, warehouse: WarehouseLookupRow) {
-  const normalizedCandidate = normalizeWarehouseAddress(candidateAddress);
-  if (!normalizedCandidate || !warehouse.normalizedAddress) {
+  const normalizedCandidate = compactWhitespaceOnly(candidateAddress);
+  const normalizedWarehouseAddress = compactWhitespaceOnly(warehouse.address);
+
+  if (!normalizedCandidate || !normalizedWarehouseAddress) {
     return 0;
   }
 
-  let score = calculateDiceSimilarity(normalizedCandidate, warehouse.normalizedAddress);
-  const candidatePostal = extractPostalCode(candidateAddress);
-  const warehousePostal = extractPostalCode(warehouse.address);
-
-  if (candidatePostal && warehousePostal && candidatePostal === warehousePostal) {
-    score += 0.12;
-  }
-
-  if (
-    warehouse.normalizedAddress.includes(normalizedCandidate) ||
-    normalizedCandidate.includes(warehouse.normalizedAddress)
-  ) {
-    score = Math.max(score, 0.97);
-  }
-
-  return Math.min(score, 1);
+  return calculateSequenceMatcherRatio(normalizedWarehouseAddress, normalizedCandidate);
 }
 
 export function resolveWarehouseMatch(bodyText: string, warehouses: WarehouseLookupRow[]) {
@@ -253,7 +245,7 @@ export function resolveWarehouseMatch(bodyText: string, warehouses: WarehouseLoo
   let bestMatch: { address: string; warehouse: string; score: number } = {
     address: fallbackAddress,
     warehouse: "N/A",
-    score: 0,
+    score: -1,
   };
 
   for (const candidate of candidates) {
@@ -267,14 +259,6 @@ export function resolveWarehouseMatch(bodyText: string, warehouses: WarehouseLoo
         };
       }
     }
-  }
-
-  if (bestMatch.score < 0.45) {
-    return {
-      address: bestMatch.address || fallbackAddress,
-      warehouse: "N/A",
-      score: bestMatch.score,
-    };
   }
 
   return bestMatch;
