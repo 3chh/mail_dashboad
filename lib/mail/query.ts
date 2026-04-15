@@ -1,3 +1,5 @@
+import { extractPostalCode, normalizeWarehouseAddress } from "@/lib/utils";
+
 type LocalSearchInput = {
   keyword?: string;
   sender?: string;
@@ -220,14 +222,33 @@ function calculateSequenceMatcherRatio(left: string, right: string): number {
 }
 
 function scoreWarehouseMatch(candidateAddress: string, warehouse: WarehouseLookupRow) {
-  const normalizedCandidate = compactWhitespaceOnly(candidateAddress);
-  const normalizedWarehouseAddress = compactWhitespaceOnly(warehouse.address);
+  const normalizedCandidate = compactWhitespaceOnly(normalizeWarehouseAddress(candidateAddress));
+  const normalizedWarehouseAddress = compactWhitespaceOnly(warehouse.normalizedAddress || normalizeWarehouseAddress(warehouse.address));
 
   if (!normalizedCandidate || !normalizedWarehouseAddress) {
     return 0;
   }
 
-  return calculateSequenceMatcherRatio(normalizedWarehouseAddress, normalizedCandidate);
+  if (normalizedCandidate === normalizedWarehouseAddress) {
+    return 1;
+  }
+
+  let score = calculateSequenceMatcherRatio(normalizedWarehouseAddress, normalizedCandidate);
+  const candidatePostal = extractPostalCode(candidateAddress);
+  const warehousePostal = extractPostalCode(warehouse.address);
+
+  if (candidatePostal && warehousePostal && candidatePostal === warehousePostal) {
+    score += 0.12;
+  }
+
+  if (
+    normalizedWarehouseAddress.includes(normalizedCandidate) ||
+    normalizedCandidate.includes(normalizedWarehouseAddress)
+  ) {
+    score = Math.max(score, 0.97);
+  }
+
+  return Math.min(score, 1);
 }
 
 export function resolveWarehouseMatch(bodyText: string, warehouses: WarehouseLookupRow[]) {
