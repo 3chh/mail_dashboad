@@ -16,10 +16,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import type { MailboxStatus } from "@prisma/client";
+import { ConfirmActionDialog } from "@/components/shared/confirm-action-dialog";
 import { MailboxStatusBadge } from "@/components/shared/mailbox-status-badge";
 import { ProviderBadge } from "@/components/shared/provider-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -87,6 +89,11 @@ export function MailboxesClient({
   const [editDisplayName, setEditDisplayName] = useState("");
   const [editGroupId, setEditGroupId] = useState<string>("ALL");
   const [editNewGroupName, setEditNewGroupName] = useState("");
+  const [mailboxToDelete, setMailboxToDelete] = useState<MailboxRow | null>(null);
+  const [groupToRename, setGroupToRename] = useState<GroupRow | null>(null);
+  const [groupRenameValue, setGroupRenameValue] = useState("");
+  const [groupToDelete, setGroupToDelete] = useState<GroupRow | null>(null);
+  const [mailboxToReconnect, setMailboxToReconnect] = useState<Pick<MailboxRow, "id" | "status" | "emailAddress"> | null>(null);
 
   useEffect(() => {
     setStatusFilter(initialStatusFilter);
@@ -304,10 +311,6 @@ export function MailboxesClient({
   }
 
   async function deleteMailbox(mailbox: MailboxRow) {
-    if (!window.confirm(`Xóa mailbox ${mailbox.emailAddress}? Toàn bộ mail đã đồng bộ của mailbox này sẽ bị xóa.`)) {
-      return;
-    }
-
     startTransition(async () => {
       const response = await fetch(`/api/mailboxes/${mailbox.id}`, {
         method: "DELETE",
@@ -322,6 +325,7 @@ export function MailboxesClient({
       if (editingMailboxId === mailbox.id) {
         cancelEditMailbox();
       }
+      setMailboxToDelete(null);
       toast.success("Đã xóa mailbox.");
       router.refresh();
     });
@@ -386,9 +390,20 @@ export function MailboxesClient({
     });
   }
 
+  function openRenameGroupDialog(group: GroupRow) {
+    setGroupToRename(group);
+    setGroupRenameValue(group.name);
+  }
+
+  function closeRenameGroupDialog() {
+    setGroupToRename(null);
+    setGroupRenameValue("");
+  }
+
   async function renameGroup(group: GroupRow) {
-    const nextName = window.prompt("Tên nhóm mới", group.name)?.trim();
+    const nextName = groupRenameValue.trim();
     if (!nextName || nextName === group.name) {
+      closeRenameGroupDialog();
       return;
     }
 
@@ -407,16 +422,13 @@ export function MailboxesClient({
         return;
       }
 
+      closeRenameGroupDialog();
       toast.success("Đã cập nhật nhóm mailbox.");
       router.refresh();
     });
   }
 
   async function deleteGroup(group: GroupRow) {
-    if (!window.confirm(`Xóa nhóm ${group.name}? Các mailbox trong nhóm sẽ chuyển về All.`)) {
-      return;
-    }
-
     startTransition(async () => {
       const response = await fetch(`/api/mailbox-groups/${group.id}`, {
         method: "DELETE",
@@ -437,6 +449,7 @@ export function MailboxesClient({
       if (editGroupId === group.id) {
         setEditGroupId("ALL");
       }
+      setGroupToDelete(null);
       toast.success("Đã xóa nhóm mailbox.");
       router.refresh();
     });
@@ -455,14 +468,13 @@ export function MailboxesClient({
     return payload.url;
   }
 
-  async function openConsentWindow(mailbox: Pick<MailboxRow, "id" | "status" | "emailAddress">) {
-    if (mailbox.status === "ACTIVE") {
-      const shouldReconnect = window.confirm(`Mailbox ${mailbox.emailAddress} đang hoạt động. Bạn có chắc muốn kết nối lại không?`);
-      if (!shouldReconnect) {
-        return;
-      }
+  async function openConsentWindow(mailbox: Pick<MailboxRow, "id" | "status" | "emailAddress">, skipConfirm = false) {
+    if (mailbox.status === "ACTIVE" && !skipConfirm) {
+      setMailboxToReconnect(mailbox);
+      return;
     }
 
+    setMailboxToReconnect(null);
     const popup = window.open("", "_blank");
     setBusyMailboxId(mailbox.id);
     try {
@@ -635,10 +647,10 @@ export function MailboxesClient({
                   </div>
                   {activeGroup ? (
                     <div className="flex shrink-0 gap-1.5">
-                      <Button type="button" variant="ghost" size="icon-sm" className="rounded-xl text-muted-foreground hover:text-foreground" onClick={() => void renameGroup(activeGroup)}>
+                      <Button type="button" variant="ghost" size="icon-sm" className="rounded-xl text-muted-foreground hover:text-foreground" onClick={() => openRenameGroupDialog(activeGroup)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button type="button" variant="ghost" size="icon-sm" className="rounded-xl text-[color:var(--danger)] hover:bg-[color:var(--danger-soft)] hover:text-[color:var(--danger)]" onClick={() => void deleteGroup(activeGroup)}>
+                      <Button type="button" variant="ghost" size="icon-sm" className="rounded-xl text-[color:var(--danger)] hover:bg-[color:var(--danger-soft)] hover:text-[color:var(--danger)]" onClick={() => setGroupToDelete(activeGroup)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -950,7 +962,7 @@ export function MailboxesClient({
                                     className="rounded-xl px-3 py-2"
                                     onClick={() => {
                                       setOpenActionMenuId(null);
-                                      void deleteMailbox(mailbox);
+                                      setMailboxToDelete(mailbox);
                                     }}
                                   >
                                     <Trash2 className="h-4 w-4" />
@@ -996,6 +1008,98 @@ export function MailboxesClient({
           ) : null}
         </CardContent>
       </Card>
+      <Dialog
+        open={Boolean(groupToRename)}
+        onOpenChange={(open) => {
+          if (!open) {
+            closeRenameGroupDialog();
+          }
+        }}
+      >
+        <DialogContent className="panel-surface rounded-[28px] border-border/40 bg-card/95 pb-6 sm:max-w-sm" showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle className="text-xl">Đổi tên nhóm</DialogTitle>
+          </DialogHeader>
+          <Input
+            value={groupRenameValue}
+            onChange={(event) => setGroupRenameValue(event.target.value)}
+            placeholder="Tên nhóm mới"
+            className="h-11 rounded-2xl"
+          />
+          <div className="mt-2 flex justify-end gap-3">
+            <DialogClose
+              render={<Button variant="ghost" className="h-10 rounded-xl px-5 font-semibold transition-all hover:bg-muted" disabled={isPending} />}
+            >
+              Hủy
+            </DialogClose>
+            <Button
+              className="h-10 rounded-xl px-5 font-semibold shadow-sm transition-all hover:brightness-110 active:scale-95"
+              disabled={isPending || !groupToRename || !groupRenameValue.trim() || groupRenameValue.trim() === groupToRename.name}
+              onClick={() => {
+                if (groupToRename) {
+                  void renameGroup(groupToRename);
+                }
+              }}
+            >
+              {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Pencil className="mr-2 h-4 w-4" />}
+              Lưu tên nhóm
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <ConfirmActionDialog
+        open={Boolean(mailboxToDelete)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setMailboxToDelete(null);
+          }
+        }}
+        title="Xóa mailbox"
+        description={`Xóa mailbox "${mailboxToDelete?.emailAddress ?? ""}"? Toàn bộ mail đã đồng bộ của mailbox này sẽ bị xóa.`}
+        confirmLabel="Xóa mailbox"
+        confirmVariant="destructive"
+        isPending={isPending}
+        onConfirm={() => {
+          if (mailboxToDelete) {
+            void deleteMailbox(mailboxToDelete);
+          }
+        }}
+      />
+      <ConfirmActionDialog
+        open={Boolean(groupToDelete)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setGroupToDelete(null);
+          }
+        }}
+        title="Xóa nhóm mailbox"
+        description={`Xóa nhóm "${groupToDelete?.name ?? ""}"? Các mailbox trong nhóm sẽ chuyển về All.`}
+        confirmLabel="Xóa nhóm"
+        confirmVariant="destructive"
+        isPending={isPending}
+        onConfirm={() => {
+          if (groupToDelete) {
+            void deleteGroup(groupToDelete);
+          }
+        }}
+      />
+      <ConfirmActionDialog
+        open={Boolean(mailboxToReconnect)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setMailboxToReconnect(null);
+          }
+        }}
+        title="Kết nối lại mailbox"
+        description={`Mailbox "${mailboxToReconnect?.emailAddress ?? ""}" đang hoạt động. Bạn có chắc muốn kết nối lại không?`}
+        confirmLabel="Kết nối lại"
+        isPending={Boolean(mailboxToReconnect && busyMailboxId === mailboxToReconnect.id)}
+        onConfirm={() => {
+          if (mailboxToReconnect) {
+            void openConsentWindow(mailboxToReconnect, true);
+          }
+        }}
+      />
     </div>
   );
 }

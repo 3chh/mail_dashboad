@@ -3,6 +3,7 @@
 import { useEffect, useEffectEvent, useState } from "react";
 import { ActivitySquare, Loader2, MoreVertical, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { ConfirmActionDialog } from "@/components/shared/confirm-action-dialog";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -70,6 +71,8 @@ export function JobsClient({ initialJobs, currentPage, pageSize }: { initialJobs
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [deletingRunId, setDeletingRunId] = useState<string | null>(null);
   const [isDeletingAll, setIsDeletingAll] = useState(false);
+  const [runToDelete, setRunToDelete] = useState<ScanRun | null>(null);
+  const [confirmDeleteAllOpen, setConfirmDeleteAllOpen] = useState(false);
 
   useEffect(() => {
     setJobs(initialJobs);
@@ -96,11 +99,6 @@ export function JobsClient({ initialJobs, currentPage, pageSize }: { initialJobs
       return;
     }
 
-    const confirmed = window.confirm(`Xóa lịch sử của "${job.jobName ?? "Luồng đồng bộ"}"? Dữ liệu mail đã đồng bộ vẫn được giữ nguyên.`);
-    if (!confirmed) {
-      return;
-    }
-
     setDeletingRunId(job.id);
 
     try {
@@ -114,6 +112,7 @@ export function JobsClient({ initialJobs, currentPage, pageSize }: { initialJobs
         return;
       }
 
+      setRunToDelete(null);
       setJobs((currentJobs) => currentJobs.filter((currentJob) => currentJob.id !== job.id));
       toast.success(`Đã xóa ${payload?.deletedCount ?? 0} mục lịch sử đồng bộ.`);
     } finally {
@@ -125,11 +124,6 @@ export function JobsClient({ initialJobs, currentPage, pageSize }: { initialJobs
     const hasFinishedJobs = jobs.some((job) => isFinishedStatus(job.status));
     if (!hasFinishedJobs) {
       toast.error("Không có lịch sử đã kết thúc để xóa.");
-      return;
-    }
-
-    const confirmed = window.confirm("Xóa toàn bộ lịch sử đồng bộ đã kết thúc? Dữ liệu mail đã đồng bộ vẫn được giữ nguyên.");
-    if (!confirmed) {
       return;
     }
 
@@ -146,11 +140,31 @@ export function JobsClient({ initialJobs, currentPage, pageSize }: { initialJobs
         return;
       }
 
+      setConfirmDeleteAllOpen(false);
       setJobs((currentJobs) => currentJobs.filter((job) => !isFinishedStatus(job.status)));
       toast.success(`Đã xóa ${payload?.deletedCount ?? 0} mục lịch sử đồng bộ.`);
     } finally {
       setIsDeletingAll(false);
     }
+  }
+
+  function requestDeleteRunHistory(job: ScanRun) {
+    if (!isFinishedStatus(job.status)) {
+      toast.error("Chỉ có thể xóa lịch sử đã kết thúc.");
+      return;
+    }
+
+    setRunToDelete(job);
+  }
+
+  function requestDeleteAllHistory() {
+    const hasFinishedJobs = jobs.some((job) => isFinishedStatus(job.status));
+    if (!hasFinishedJobs) {
+      toast.error("Không có lịch sử đã kết thúc để xóa.");
+      return;
+    }
+
+    setConfirmDeleteAllOpen(true);
   }
 
   useEffect(() => {
@@ -180,7 +194,7 @@ export function JobsClient({ initialJobs, currentPage, pageSize }: { initialJobs
           <Button
             variant="destructive"
             className="h-10 flex-1 rounded-xl px-4 text-sm font-medium md:flex-initial"
-            onClick={() => void deleteAllHistory()}
+            onClick={requestDeleteAllHistory}
             disabled={isDeletingAll}
           >
             {isDeletingAll ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
@@ -215,7 +229,7 @@ export function JobsClient({ initialJobs, currentPage, pageSize }: { initialJobs
                   <Button
                     variant="destructive"
                     className="size-10 shrink-0 rounded-xl p-0"
-                    onClick={() => void deleteRunHistory(job)}
+                    onClick={() => requestDeleteRunHistory(job)}
                     disabled={!isFinished || isDeletingThisRun}
                     title={isFinished ? "Xóa lịch sử đồng bộ" : "Chỉ xóa được lịch sử đã kết thúc"}
                   >
@@ -283,6 +297,34 @@ export function JobsClient({ initialJobs, currentPage, pageSize }: { initialJobs
           </Card>
         );
       })}
+      <ConfirmActionDialog
+        open={confirmDeleteAllOpen}
+        onOpenChange={setConfirmDeleteAllOpen}
+        title="Xóa toàn bộ lịch sử"
+        description="Xóa toàn bộ lịch sử đồng bộ đã kết thúc? Dữ liệu mail đã đồng bộ vẫn được giữ nguyên."
+        confirmLabel="Xóa toàn bộ"
+        confirmVariant="destructive"
+        isPending={isDeletingAll}
+        onConfirm={() => void deleteAllHistory()}
+      />
+      <ConfirmActionDialog
+        open={Boolean(runToDelete)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRunToDelete(null);
+          }
+        }}
+        title="Xóa lịch sử đồng bộ"
+        description={`Xóa lịch sử của "${runToDelete?.jobName ?? "Luồng đồng bộ"}"? Dữ liệu mail đã đồng bộ vẫn được giữ nguyên.`}
+        confirmLabel="Xóa lịch sử"
+        confirmVariant="destructive"
+        isPending={Boolean(runToDelete && deletingRunId === runToDelete.id)}
+        onConfirm={() => {
+          if (runToDelete) {
+            void deleteRunHistory(runToDelete);
+          }
+        }}
+      />
     </div>
   );
 }

@@ -4,8 +4,10 @@ import { useState, useTransition } from "react";
 import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { ConfirmActionDialog } from "@/components/shared/confirm-action-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -79,6 +81,10 @@ export function WarehousesClient({ warehouses }: { warehouses: WarehouseRow[] })
   const [isPending, startTransition] = useTransition();
   const [bulkText, setBulkText] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [editingWarehouse, setEditingWarehouse] = useState<WarehouseRow | null>(null);
+  const [editingName, setEditingName] = useState("");
+  const [editingAddress, setEditingAddress] = useState("");
+  const [warehouseToDelete, setWarehouseToDelete] = useState<WarehouseRow | null>(null);
 
   const normalizedSearchTerm = searchTerm.trim().toLowerCase();
   const filteredWarehouses = normalizedSearchTerm
@@ -154,14 +160,24 @@ export function WarehousesClient({ warehouses }: { warehouses: WarehouseRow[] })
     });
   }
 
-  async function editWarehouse(warehouse: WarehouseRow) {
-    const nextName = window.prompt("Tên kho", warehouse.name)?.trim();
-    if (!nextName) {
-      return;
-    }
+  function openEditWarehouse(warehouse: WarehouseRow) {
+    setEditingWarehouse(warehouse);
+    setEditingName(warehouse.name);
+    setEditingAddress(warehouse.address);
+  }
 
-    const nextAddress = window.prompt("Địa chỉ đối chiếu", warehouse.address)?.trim();
-    if (!nextAddress) {
+  function closeEditWarehouse() {
+    setEditingWarehouse(null);
+    setEditingName("");
+    setEditingAddress("");
+  }
+
+  async function saveWarehouseEdits() {
+    const warehouse = editingWarehouse;
+    const nextName = editingName.trim();
+    const nextAddress = editingAddress.trim();
+
+    if (!warehouse || !nextName || !nextAddress) {
       return;
     }
 
@@ -180,16 +196,13 @@ export function WarehousesClient({ warehouses }: { warehouses: WarehouseRow[] })
         return;
       }
 
+      closeEditWarehouse();
       toast.success("Đã cập nhật kho.");
       router.refresh();
     });
   }
 
   async function deleteWarehouse(warehouse: WarehouseRow) {
-    if (!window.confirm(`Xóa kho ${warehouse.name}?`)) {
-      return;
-    }
-
     startTransition(async () => {
       const response = await fetch(`/api/warehouses/${warehouse.id}`, {
         method: "DELETE",
@@ -201,6 +214,10 @@ export function WarehousesClient({ warehouses }: { warehouses: WarehouseRow[] })
         return;
       }
 
+      setWarehouseToDelete(null);
+      if (editingWarehouse?.id === warehouse.id) {
+        closeEditWarehouse();
+      }
       toast.success("Đã xóa kho.");
       router.refresh();
     });
@@ -263,11 +280,11 @@ export function WarehousesClient({ warehouses }: { warehouses: WarehouseRow[] })
                         <TableCell className="text-sm text-muted-foreground">{warehouse.updatedAt}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <Button type="button" variant="outline" className="h-9 rounded-xl" onClick={() => void editWarehouse(warehouse)}>
+                            <Button type="button" variant="outline" className="h-9 rounded-xl" onClick={() => openEditWarehouse(warehouse)}>
                               <Pencil className="mr-2 h-4 w-4" />
                               Sửa
                             </Button>
-                            <Button type="button" variant="destructive" className="h-9 rounded-xl" onClick={() => void deleteWarehouse(warehouse)}>
+                            <Button type="button" variant="destructive" className="h-9 rounded-xl" onClick={() => setWarehouseToDelete(warehouse)}>
                               <Trash2 className="mr-2 h-4 w-4" />
                               Xóa
                             </Button>
@@ -289,6 +306,63 @@ export function WarehousesClient({ warehouses }: { warehouses: WarehouseRow[] })
           </div>
         </CardContent>
       </Card>
+
+      <Dialog
+        open={Boolean(editingWarehouse)}
+        onOpenChange={(open) => {
+          if (!open) {
+            closeEditWarehouse();
+          }
+        }}
+      >
+        <DialogContent className="panel-surface rounded-[28px] border-border/40 bg-card/95 pb-6 sm:max-w-lg" showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle className="text-xl">Cập nhật kho</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input value={editingName} onChange={(event) => setEditingName(event.target.value)} placeholder="Tên kho" className="h-11 rounded-2xl" />
+            <Textarea
+              value={editingAddress}
+              onChange={(event) => setEditingAddress(event.target.value)}
+              placeholder="Địa chỉ đối chiếu"
+              className="min-h-28 rounded-2xl text-sm"
+            />
+          </div>
+          <div className="mt-2 flex justify-end gap-3">
+            <DialogClose
+              render={<Button variant="ghost" className="h-10 rounded-xl px-5 font-semibold transition-all hover:bg-muted" disabled={isPending} />}
+            >
+              Hủy
+            </DialogClose>
+            <Button
+              className="h-10 rounded-xl px-5 font-semibold shadow-sm transition-all hover:brightness-110 active:scale-95"
+              disabled={isPending || !editingName.trim() || !editingAddress.trim()}
+              onClick={() => void saveWarehouseEdits()}
+            >
+              {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Pencil className="mr-2 h-4 w-4" />}
+              Lưu thay đổi
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <ConfirmActionDialog
+        open={Boolean(warehouseToDelete)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setWarehouseToDelete(null);
+          }
+        }}
+        title="Xóa kho"
+        description={`Xóa kho "${warehouseToDelete?.name ?? ""}" khỏi danh sách đối chiếu?`}
+        confirmLabel="Xóa kho"
+        confirmVariant="destructive"
+        isPending={isPending}
+        onConfirm={() => {
+          if (warehouseToDelete) {
+            void deleteWarehouse(warehouseToDelete);
+          }
+        }}
+      />
     </div>
   );
 }
