@@ -221,34 +221,147 @@ function calculateSequenceMatcherRatio(left: string, right: string): number {
   return (2 * matches) / (left.length + right.length);
 }
 
-function scoreWarehouseMatch(candidateAddress: string, warehouse: WarehouseLookupRow) {
-  const normalizedCandidate = compactWhitespaceOnly(normalizeWarehouseAddress(candidateAddress));
-  const normalizedWarehouseAddress = compactWhitespaceOnly(warehouse.normalizedAddress || normalizeWarehouseAddress(warehouse.address));
+function normalizePostalPattern(postalCode: string) {
+  return `${postalCode.slice(0, 3)}-?${postalCode.slice(3)}`;
+}
 
-  if (!normalizedCandidate || !normalizedWarehouseAddress) {
+function stripPostalCode(value: string, postalCode: string | null) {
+  if (!postalCode) {
+    return value;
+  }
+
+  return value.replace(new RegExp(normalizePostalPattern(postalCode), "g"), " ");
+}
+
+function extractAddressNumberTokens(value: string, postalCode: string | null) {
+  const normalizedSource = value.normalize("NFKC");
+  const withoutPostal = stripPostalCode(normalizedSource, postalCode);
+  return withoutPostal.match(/\d+/g) ?? [];
+}
+
+function extractAddressTextToken(value: string, postalCode: string | null) {
+  const normalized = normalizeWarehouseAddress(stripPostalCode(value, postalCode));
+  return compactWhitespaceOnly(normalized.replace(/\d+/g, ""));
+}
+
+function countLeadingNumberMatches(left: string[], right: string[]) {
+  let matches = 0;
+  const limit = Math.min(left.length, right.length);
+
+  while (matches < limit && left[matches] === right[matches]) {
+    matches += 1;
+  }
+
+  return matches;
+}
+
+function countMatchedNumbers(left: string[], right: string[]) {
+  if (left.length === 0 || right.length === 0) {
     return 0;
   }
 
-  if (normalizedCandidate === normalizedWarehouseAddress) {
-    return 1;
+  const counts = new Map<string, number>();
+  for (const token of right) {
+    counts.set(token, (counts.get(token) ?? 0) + 1);
   }
 
-  let score = calculateSequenceMatcherRatio(normalizedWarehouseAddress, normalizedCandidate);
+  let matches = 0;
+  for (const token of left) {
+    const count = counts.get(token) ?? 0;
+    if (count > 0) {
+      matches += 1;
+      counts.set(token, count - 1);
+    }
+  }
+
+  return matches;
+}
+
+type WarehouseMatchRank = {
+  postalExact: number;
+  leadingNumberMatches: number;
+  roomExact: number;
+  matchedNumberCount: number;
+  textContains: number;
+  textSimilarity: number;
+  overallSimilarity: number;
+};
+
+function compareWarehouseRanks(left: WarehouseMatchRank, right: WarehouseMatchRank) {
+  if (left.postalExact !== right.postalExact) {
+    return left.postalExact - right.postalExact;
+  }
+
+  if (left.leadingNumberMatches !== right.leadingNumberMatches) {
+    return left.leadingNumberMatches - right.leadingNumberMatches;
+  }
+
+  if (left.roomExact !== right.roomExact) {
+    return left.roomExact - right.roomExact;
+  }
+
+  if (left.matchedNumberCount !== right.matchedNumberCount) {
+    return left.matchedNumberCount - right.matchedNumberCount;
+  }
+
+  if (left.textContains !== right.textContains) {
+    return left.textContains - right.textContains;
+  }
+
+  if (left.textSimilarity !== right.textSimilarity) {
+    return left.textSimilarity - right.textSimilarity;
+  }
+
+  return left.overallSimilarity - right.overallSimilarity;
+}
+
+function rankToScore(rank: WarehouseMatchRank) {
+  return Number(
+    (
+      rank.postalExact * 1000 +
+      rank.leadingNumberMatches * 100 +
+      rank.roomExact * 10 +
+      rank.matchedNumberCount +
+      rank.textContains * 0.1 +
+      rank.textSimilarity * 0.01 +
+      rank.overallSimilarity * 0.001
+    ).toFixed(6)
+  );
+}
+
+function scoreWarehouseMatch(candidateAddress: string, warehouse: WarehouseLookupRow) {
   const candidatePostal = extractPostalCode(candidateAddress);
   const warehousePostal = extractPostalCode(warehouse.address);
+  const normalizedCandidate = normalizeWarehouseAddress(candidateAddress);
+  const normalizedWarehouseAddress = warehouse.normalizedAddress || normalizeWarehouseAddress(warehouse.address);
+  const candidateNumbers = extractAddressNumberTokens(candidateAddress, candidatePostal);
+  const warehouseNumbers = extractAddressNumberTokens(warehouse.address, warehousePostal);
+  const candidateText = extractAddressTextToken(candidateAddress, candidatePostal);
+  const warehouseText = extractAddressTextToken(warehouse.address, warehousePostal);
 
-  if (candidatePostal && warehousePostal && candidatePostal === warehousePostal) {
-    score += 0.12;
-  }
+  const textSimilarity =
+    candidateText && warehouseText ? calculateSequenceMatcherRatio(candidateText, warehouseText) : 0;
+  const overallSimilarity = calculateSequenceMatcherRatio(normalizedWarehouseAddress, normalizedCandidate);
+  const rank: WarehouseMatchRank = {
+    postalExact: candidatePostal && warehousePostal && candidatePostal === warehousePostal ? 1 : 0,
+    leadingNumberMatches: countLeadingNumberMatches(candidateNumbers, warehouseNumbers),
+    roomExact:
+      candidateNumbers.length > 0 &&
+      warehouseNumbers.length > 0 &&
+      candidateNumbers.at(-1) === warehouseNumbers.at(-1)
+        ? 1
+        : 0,
+    matchedNumberCount: countMatchedNumbers(candidateNumbers, warehouseNumbers),
+    textContains:
+      candidateText && warehouseText && (candidateText.includes(warehouseText) || warehouseText.includes(candidateText)) ? 1 : 0,
+    textSimilarity,
+    overallSimilarity,
+  };
 
-  if (
-    normalizedWarehouseAddress.includes(normalizedCandidate) ||
-    normalizedCandidate.includes(normalizedWarehouseAddress)
-  ) {
-    score = Math.max(score, 0.97);
-  }
-
-  return Math.min(score, 1);
+  return {
+    rank,
+    score: rankToScore(rank),
+  };
 }
 
 export function resolveWarehouseMatch(bodyText: string, warehouses: WarehouseLookupRow[]) {
@@ -268,11 +381,20 @@ export function resolveWarehouseMatch(bodyText: string, warehouses: WarehouseLoo
     warehouse: "N/A",
     score: -1,
   };
+  let bestRank: WarehouseMatchRank | null = null;
 
   for (const candidate of candidates) {
-    for (const warehouse of warehouses) {
-      const score = scoreWarehouseMatch(candidate, warehouse);
-      if (score > bestMatch.score) {
+    const candidatePostal = extractPostalCode(candidate);
+    const samePostalWarehouses =
+      candidatePostal
+        ? warehouses.filter((warehouse) => extractPostalCode(warehouse.address) === candidatePostal)
+        : [];
+    const candidateWarehouses = samePostalWarehouses.length > 0 ? samePostalWarehouses : warehouses;
+
+    for (const warehouse of candidateWarehouses) {
+      const { rank, score } = scoreWarehouseMatch(candidate, warehouse);
+      if (!bestRank || compareWarehouseRanks(rank, bestRank) > 0) {
+        bestRank = rank;
         bestMatch = {
           address: candidate,
           warehouse: warehouse.name,
