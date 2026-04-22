@@ -10,6 +10,45 @@ import { markJobFinished, markJobRunning } from "@/lib/jobs/scan-queue";
 
 const MAX_SYNC_MESSAGES = 500;
 
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
+function requiresMailboxReconnect(message: string) {
+  const normalized = message.toLowerCase();
+
+  return [
+    "invalid_grant",
+    "invalid_client",
+    "invalid_token",
+    "unauthorized",
+    "unauthenticated",
+    "access_denied",
+    "access denied",
+    "insufficient permission",
+    "insufficientpermissions",
+    "login required",
+    "consent",
+    "scope",
+    "token has been expired or revoked",
+    "refresh token",
+    "revoke",
+    "revoked",
+    "reauth",
+    "interaction_required",
+    "aadsts",
+    "authenticate data",
+  ].some((token) => normalized.includes(token));
+}
+
+function summarizeMessageFailures(failures: string[]) {
+  if (failures.length === 0) {
+    return null;
+  }
+
+  return `Đồng bộ hoàn tất với ${failures.length} mail lỗi. Lỗi gần nhất: ${failures.at(-1)}`;
+}
+
 async function appendJobLog(args: {
   scanJobId: string;
   adminUserId?: string | null;
@@ -146,16 +185,34 @@ export async function runScanJob(scanJobId: string) {
 
     let scannedCount = 0;
     let savedCount = 0;
+    const messageFailures: string[] = [];
 
     for (const remoteMessageId of ids) {
-      const result = await processSingleMessage({
-        mailboxId: job.mailboxId,
-        scanJobId,
-        remoteMessageId,
-      });
+      try {
+        const result = await processSingleMessage({
+          mailboxId: job.mailboxId,
+          scanJobId,
+          remoteMessageId,
+        });
 
-      scannedCount += 1;
-      savedCount += result.saved;
+        scannedCount += 1;
+        savedCount += result.saved;
+      } catch (error) {
+        const message = getErrorMessage(error, "Không thể xử lý mail.");
+        messageFailures.push(`${remoteMessageId}: ${message}`);
+
+        await appendJobLog({
+          scanJobId,
+          adminUserId: job.adminUserId,
+          mailboxId: job.mailboxId,
+          level: "warn",
+          message: "Bỏ qua một mail do lỗi trong lúc đồng bộ.",
+          context: {
+            remoteMessageId,
+            error: message,
+          },
+        });
+      }
 
       await prisma.scanJob.update({
         where: {
@@ -170,13 +227,16 @@ export async function runScanJob(scanJobId: string) {
       });
     }
 
+    const mailboxErrorSummary = summarizeMessageFailures(messageFailures);
+    const jobFailed = ids.length > 0 && scannedCount === 0 && messageFailures.length > 0;
+
     await prisma.mailbox.update({
       where: {
         id: job.mailboxId,
       },
       data: {
         lastSyncedAt: new Date(),
-        lastError: null,
+        lastError: mailboxErrorSummary,
         status: MailboxStatus.ACTIVE,
       },
     });
@@ -186,12 +246,31 @@ export async function runScanJob(scanJobId: string) {
         id: scanJobId,
       },
       data: {
-        status: ScanJobStatus.COMPLETED,
+        status: jobFailed ? ScanJobStatus.FAILED : ScanJobStatus.COMPLETED,
         completedAt: new Date(),
         otpDetectionsFound: 0,
         orderExtractionsFound: 0,
+        errorMessage: jobFailed ? mailboxErrorSummary : null,
       },
     });
+
+    if (mailboxErrorSummary) {
+      await appendJobLog({
+        scanJobId,
+        adminUserId: job.adminUserId,
+        mailboxId: job.mailboxId,
+        level: jobFailed ? "error" : "warn",
+        message: jobFailed
+          ? "Đồng bộ mailbox thất bại do tất cả mail đều lỗi."
+          : "Đồng bộ mailbox hoàn tất nhưng có mail bị lỗi.",
+        context: {
+          failedMessageCount: messageFailures.length,
+          scannedCount,
+          savedCount,
+          latestFailure: messageFailures.at(-1) ?? null,
+        },
+      });
+    }
 
     await appendJobLog({
       scanJobId,
@@ -202,10 +281,11 @@ export async function runScanJob(scanJobId: string) {
       context: {
         scannedCount,
         savedCount,
+        failedMessageCount: messageFailures.length,
       },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Đồng bộ mailbox thất bại.";
+    const message = getErrorMessage(error, "Đồng bộ mailbox thất bại.");
 
     const job = await prisma.scanJob.update({
       where: {
@@ -227,7 +307,7 @@ export async function runScanJob(scanJobId: string) {
       },
       data: {
         lastError: message,
-        status: MailboxStatus.ERROR,
+        status: requiresMailboxReconnect(message) ? MailboxStatus.RECONNECT_REQUIRED : MailboxStatus.ACTIVE,
       },
     });
 
@@ -239,6 +319,7 @@ export async function runScanJob(scanJobId: string) {
       message: "Đồng bộ mailbox thất bại.",
       context: {
         error: message,
+        reconnectRequired: requiresMailboxReconnect(message),
       },
     });
   } finally {

@@ -58,7 +58,12 @@ export async function POST(request: Request) {
       id: {
         in: mailboxIds,
       },
-      status: MailboxStatus.ACTIVE,
+      status:
+        requestedMailboxIds.length > 0
+          ? {
+            in: [MailboxStatus.ACTIVE, MailboxStatus.ERROR],
+          }
+          : MailboxStatus.ACTIVE,
       OR: [{ createdById: admin.id }, { createdById: null }],
     },
     select: {
