@@ -21,9 +21,21 @@ export async function POST() {
 
     const command = `pg_dump -h localhost -U postgres -d mail_dashboard -Fc -f ${fileName}`;
 
+    // Thêm các đường dẫn PostgreSQL phổ biến trên Mac (Homebrew, Postgres.app)
+    const extraPaths = [
+      "/Library/PostgreSQL/17/bin",
+      "/usr/local/bin",
+      "/Applications/Postgres.app/Contents/Versions/latest/bin",
+    ].join(":");
+    const currentPath = process.env.PATH || "";
+
     const { stdout, stderr } = await execAsync(command, {
       cwd: process.cwd(),
-      env: { ...process.env, PGPASSWORD: "ZAQ!xsw2cde3" },
+      env: {
+        ...process.env,
+        PGPASSWORD: "ZAQ!xsw2cde3",
+        PATH: `${extraPaths}:${currentPath}`,
+      },
     });
 
     return NextResponse.json({
