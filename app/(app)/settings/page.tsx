@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getSettingsData } from "@/lib/queries/app-data";
 import { LogoutButton } from "@/components/layout/logout-button";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { BackupButton } from "@/components/settings/backup-button";
 
 export default async function SettingsPage() {
   const admin = await getRequiredAdmin();
@@ -46,6 +47,8 @@ export default async function SettingsPage() {
               </div>
               <ThemeToggle />
             </div>
+
+            <BackupButton />
 
             <div className="pt-2 border-t border-border/40">
               <LogoutButton />
