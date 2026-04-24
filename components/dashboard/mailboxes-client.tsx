@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 import type { MailboxStatus } from "@prisma/client";
 import { ConfirmActionDialog } from "@/components/shared/confirm-action-dialog";
+import { DaysInput } from "@/components/shared/days-input";
 import { MailboxStatusBadge } from "@/components/shared/mailbox-status-badge";
 import { ProviderBadge } from "@/components/shared/provider-badge";
 import { Button } from "@/components/ui/button";
@@ -584,18 +585,6 @@ export function MailboxesClient({
     return groups.find((item) => item.id === value)?.name ?? value;
   }
 
-  function getSyncWindowLabel(value: string | null) {
-    switch (value) {
-      case "1":
-        return "1 ngày";
-      case "7":
-        return "7 ngày";
-      case "30":
-        return "30 ngày";
-      default:
-        return "";
-    }
-  }
 
   return (
     <div className="space-y-4 xl:space-y-5">
@@ -744,23 +733,7 @@ export function MailboxesClient({
           <CardTitle className="font-sans !text-2xl font-semibold tracking-tight text-foreground">Trung tâm điều khiển mailbox</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 pt-1.5">
-          <div className="grid gap-3 xl:grid-cols-[12.25rem_minmax(0,1fr)_17.5rem]">
-            <div className="subpanel-surface rounded-[18px] p-2.5">
-              <div className="min-h-[1.1rem] text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-foreground/88">Đã chọn</div>
-              <div className="mt-1 flex items-end gap-2 text-foreground">
-                <span className="text-[1.8rem] leading-none font-semibold tracking-tight">{selectedIds.length}</span>
-                <span className="pb-0.5 text-sm font-medium text-muted-foreground">/ {filteredMailboxes.length}</span>
-              </div>
-              <div className="mt-2 grid grid-cols-2 gap-1.5">
-                <Button variant="secondary" size="sm" className="h-8 w-full rounded-lg px-2.5 text-[0.76rem]" onClick={selectAllVisible}>
-                  Chọn tất cả
-                </Button>
-                <Button variant="outline" size="sm" className="h-8 w-full rounded-lg px-2.5 text-[0.76rem]" onClick={clearSelection}>
-                  Bỏ chọn
-                </Button>
-              </div>
-            </div>
-
+          <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_17.5rem]">
             <div className="subpanel-surface rounded-[20px] p-3">
               <div className="mb-1.5 min-h-[1.1rem] text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-foreground/88">Bộ lọc</div>
               <div className="flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-end">
@@ -824,31 +797,31 @@ export function MailboxesClient({
               </div>
             </div>
 
-            <div className="subpanel-surface rounded-[20px] p-3.5">
-              <div className="mb-1.5 min-h-[1.1rem] text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-foreground/88">Thao tác</div>
-              <div className="grid grid-cols-2 items-end gap-2.5 lg:flex lg:flex-row">
-                <div className="w-full lg:flex-1 lg:min-w-[120px]">
-                  <div className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Khoảng ngày</div>
-                  <Select value={syncWindowDays} onValueChange={(value) => setSyncWindowDays(value ?? "7")}>
-                    <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm text-foreground/95">
-                      <SelectValue>{(value) => getSyncWindowLabel(value as string | null)}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1 ngày</SelectItem>
-                      <SelectItem value="7">7 ngày</SelectItem>
-                      <SelectItem value="30">30 ngày</SelectItem>
-                    </SelectContent>
-                  </Select>
+            <div className="subpanel-surface flex flex-col gap-2 rounded-[20px] p-3.5">
+              <div className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-foreground/88">Thao tác</div>
+
+              <div className="grid grid-cols-2 gap-1.5">
+                <Button variant="secondary" size="sm" className="h-8 rounded-lg text-[0.76rem]" onClick={selectAllVisible}>
+                  Chọn tất cả
+                </Button>
+                <Button variant="outline" size="sm" className="h-8 rounded-lg text-[0.76rem]" onClick={clearSelection}>
+                  Bỏ chọn
+                </Button>
+              </div>
+
+              <div className="flex gap-1.5 items-center">
+                <div className="flex-1 min-w-0">
+                  <DaysInput value={syncWindowDays} onValueChange={setSyncWindowDays} min={1} max={30} />
                 </div>
-                <div className="w-full lg:flex-1">
-                  <div className="mb-1.5 hidden text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground lg:block lg:text-transparent">.</div>
-                  <Button className="h-10 w-full rounded-xl px-3.5 text-sm font-semibold" onClick={() => void syncSelected()} disabled={isPending}>
-                    {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                    Đồng bộ
-                  </Button>
-                </div>
+                <Button className="h-10 shrink-0 rounded-xl px-3 text-sm font-semibold" onClick={() => void syncSelected()} disabled={isPending}>
+                  {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                </Button>
               </div>
             </div>
+          </div>
+
+          <div className="text-sm text-muted-foreground">
+            {selectedIds.length} / {filteredMailboxes.length} đã chọn
           </div>
 
           <div className="subpanel-surface overflow-hidden rounded-[24px]">

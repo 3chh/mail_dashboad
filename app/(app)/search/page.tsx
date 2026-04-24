@@ -6,6 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PaginationControls } from "@/components/shared/pagination-controls";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DaysInput } from "@/components/shared/days-input";
+
+const SEARCH_MAX_DAYS = 90;
 import { MailboxSelectionTable } from "@/components/shared/mailbox-selection-table";
 import { buildLocalSearchSummary, parseLookbackDays, parseSearchMode } from "@/lib/mail/query";
 import { createSearchParams, paginateArray, parsePageParam } from "@/lib/pagination";
@@ -135,19 +138,14 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
                 {/* Selectors Group */}
                 <div className="grid grid-cols-2 gap-3 lg:flex lg:flex-1 lg:gap-3">
-                  <div className="min-w-0 flex-1 lg:w-[130px]">
+                  <div className="min-w-0 flex-1 lg:min-w-[180px]">
                     <div className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Khoảng ngày</div>
-                    <Select name="lookbackDays" defaultValue={String(lookbackDays)}>
-                      <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">1 ngày</SelectItem>
-                        <SelectItem value="7">7 ngày</SelectItem>
-                        <SelectItem value="30">30 ngày</SelectItem>
-                        <SelectItem value="90">90 ngày</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <DaysInput
+                      name="lookbackDays"
+                      defaultValue={lookbackDays}
+                      min={1}
+                      max={SEARCH_MAX_DAYS}
+                    />
                   </div>
                   <div className="min-w-0 flex-1 lg:w-[160px]">
                     <div className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Phạm vi</div>

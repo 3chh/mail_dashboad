@@ -39,10 +39,10 @@ export function parseRequiredKeywords(rawKeyword?: string) {
   return keywords;
 }
 
-export function parseLookbackDays(rawValue?: string | null, fallback = 30) {
+export function parseLookbackDays(rawValue?: string | null, fallback = 30, max = 90) {
   const parsed = Number.parseInt(String(rawValue ?? ""), 10);
   if (Number.isFinite(parsed) && parsed > 0) {
-    return parsed;
+    return Math.min(parsed, max);
   }
 
   return fallback;

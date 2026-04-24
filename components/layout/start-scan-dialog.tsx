@@ -6,7 +6,10 @@ import { Loader2, Play } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DaysInput } from "@/components/shared/days-input";
+
+const SYNC_MIN_DAYS = 1;
+const SYNC_MAX_DAYS = 30;
 
 export function StartScanDialog() {
   const router = useRouter();
@@ -15,6 +18,11 @@ export function StartScanDialog() {
   const [isPending, startTransition] = useTransition();
 
   async function handleStartSync() {
+    const days = Number(range);
+    if (!Number.isInteger(days) || days < SYNC_MIN_DAYS || days > SYNC_MAX_DAYS) {
+      toast.error(`Số ngày phải từ ${SYNC_MIN_DAYS} đến ${SYNC_MAX_DAYS}.`);
+      return;
+    }
     startTransition(async () => {
       const response = await fetch("/api/scan-jobs", {
         method: "POST",
@@ -58,29 +66,14 @@ export function StartScanDialog() {
             <label htmlFor="sync-range" className="text-sm font-medium">
               Khoảng thời gian đồng bộ
             </label>
-            <Select value={range} onValueChange={(value) => setRange(value ?? "7")}>
-              <SelectTrigger id="sync-range" className="h-11 w-full rounded-2xl px-3 text-sm">
-                <SelectValue>
-                  {(value) => {
-                    switch (value) {
-                      case "1":
-                        return "1 ngày gần đây";
-                      case "7":
-                        return "7 ngày gần đây";
-                      case "30":
-                        return "30 ngày gần đây";
-                      default:
-                        return "";
-                    }
-                  }}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">1 ngày gần đây</SelectItem>
-                <SelectItem value="7">7 ngày gần đây</SelectItem>
-                <SelectItem value="30">30 ngày gần đây</SelectItem>
-              </SelectContent>
-            </Select>
+            <DaysInput
+              value={range}
+              onValueChange={setRange}
+              min={SYNC_MIN_DAYS}
+              max={SYNC_MAX_DAYS}
+              className="h-11 rounded-2xl"
+            />
+            <p className="text-xs text-muted-foreground">Giới hạn: {SYNC_MIN_DAYS}–{SYNC_MAX_DAYS} ngày gần đây</p>
           </div>
 
           <Button className="h-11 w-full rounded-2xl" onClick={handleStartSync} disabled={isPending}>
