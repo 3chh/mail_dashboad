@@ -239,6 +239,16 @@ export function JobsClient({ initialJobs, currentPage, pageSize }: { initialJobs
         const progress = job.totalMailboxCount > 0 ? (job.completedMailboxCount / job.totalMailboxCount) * 100 : 0;
         const isFinished = isFinishedStatus(job.status);
         const isDeletingThisRun = deletingRunId === job.id;
+        const sortedMailboxJobs = [...job.jobs].sort((left, right) => {
+          const leftFailed = left.status === "FAILED" || Boolean(left.errorMessage);
+          const rightFailed = right.status === "FAILED" || Boolean(right.errorMessage);
+
+          if (leftFailed === rightFailed) {
+            return 0;
+          }
+
+          return leftFailed ? -1 : 1;
+        });
 
         return (
           <Card key={job.id} className="rounded-[28px] bg-card/88">
@@ -281,7 +291,7 @@ export function JobsClient({ initialJobs, currentPage, pageSize }: { initialJobs
                       </DialogHeader>
 
                       <div className="max-h-[70vh] space-y-3 overflow-y-auto px-6 py-5">
-                        {job.jobs.map((mailboxJob) => (
+                        {sortedMailboxJobs.map((mailboxJob) => (
                           <div key={mailboxJob.id} className="rounded-2xl border border-border/60 bg-background/70 px-4 py-4">
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0 flex-1">
