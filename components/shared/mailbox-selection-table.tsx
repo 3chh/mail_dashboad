@@ -325,10 +325,10 @@ export function MailboxSelectionTable({
         </div>
         {/* Action buttons: side by side on mobile, stretch on desktop */}
         <div className="grid w-full grid-cols-2 gap-2 lg:w-auto lg:flex lg:flex-1 lg:gap-2">
-          <Button type="button" variant="outline" className="h-10 rounded-xl px-4 whitespace-nowrap lg:flex-1" onClick={selectAllVisible}>
+          <Button type="button" variant="outline" className="h-10 rounded-xl px-4 whitespace-nowrap lg:flex-1 btn-action-select" onClick={selectAllVisible}>
             Chọn tất cả
           </Button>
-          <Button type="button" variant="outline" className="h-10 rounded-xl px-4 whitespace-nowrap lg:flex-1" onClick={clearSelection}>
+          <Button type="button" variant="outline" className="h-10 rounded-xl px-4 whitespace-nowrap lg:flex-1 btn-action-clear" onClick={clearSelection}>
             Bỏ chọn
           </Button>
         </div>

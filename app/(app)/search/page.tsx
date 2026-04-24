@@ -169,7 +169,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                   </button>
                   <Link
                     href={`/api/search/export?${exportParams.toString()}`}
-                    className="control-surface inline-flex h-10 flex-1 items-center justify-center rounded-xl px-4 text-sm font-medium text-foreground whitespace-nowrap lg:px-6"
+                    className="btn-action-excel inline-flex h-10 flex-1 items-center justify-center rounded-xl border px-4 text-sm font-medium whitespace-nowrap transition-all lg:px-6"
                   >
                     <Download className="mr-2 h-4 w-4" />
                     Xuất Excel

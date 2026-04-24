@@ -636,10 +636,10 @@ export function MailboxesClient({
                   </div>
                   {activeGroup ? (
                     <div className="flex shrink-0 gap-1.5">
-                      <Button type="button" variant="ghost" size="icon-sm" className="rounded-xl text-muted-foreground hover:text-foreground" onClick={() => openRenameGroupDialog(activeGroup)}>
+                      <Button type="button" variant="outline" size="icon-sm" className="rounded-xl text-muted-foreground hover:text-foreground" onClick={() => openRenameGroupDialog(activeGroup)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button type="button" variant="ghost" size="icon-sm" className="rounded-xl text-[color:var(--danger)] hover:bg-[color:var(--danger-soft)] hover:text-[color:var(--danger)]" onClick={() => setGroupToDelete(activeGroup)}>
+                      <Button type="button" variant="outline" size="icon-sm" className="rounded-xl !border-destructive/40 text-[color:var(--danger)] hover:bg-[color:var(--danger-soft)] hover:text-[color:var(--danger)]" onClick={() => setGroupToDelete(activeGroup)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -736,8 +736,8 @@ export function MailboxesClient({
           <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_17.5rem]">
             <div className="subpanel-surface rounded-[20px] p-3">
               <div className="mb-1.5 min-h-[1.1rem] text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-foreground/88">Bộ lọc</div>
-              <div className="flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-end">
-                <div className="w-full flex-1 lg:min-w-[200px]">
+              <div className="flex items-end gap-2">
+                <div className="flex-[2] min-w-0">
                   <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Tìm kiếm</div>
                   <Input
                     value={searchTerm}
@@ -746,39 +746,37 @@ export function MailboxesClient({
                     className="h-10 w-full rounded-xl px-3"
                   />
                 </div>
-                <div className="grid w-full grid-cols-2 gap-2 lg:w-auto lg:flex lg:flex-1 lg:gap-2">
-                  <div className="lg:min-w-[130px] lg:flex-1">
-                    <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Nhà cung cấp</div>
-                    <Select value={providerFilter} onValueChange={(value) => setProviderFilter((value ?? "ALL") as "ALL" | "GMAIL" | "OUTLOOK")}>
-                      <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm text-foreground/95">
-                        <SelectValue>{(value) => getProviderFilterLabel(value as string | null)}</SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ALL">Tất cả</SelectItem>
-                        <SelectItem value="GMAIL">Gmail</SelectItem>
-                        <SelectItem value="OUTLOOK">Hotmail / Outlook</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="lg:min-w-[130px] lg:flex-1">
-                    <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Trạng thái</div>
-                    <Select value={statusFilter} onValueChange={(value) => setStatusFilter((value ?? "ALL") as "ALL" | MailboxStatus)}>
-                      <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm text-foreground/95">
-                        <SelectValue>{(value) => getStatusFilterLabel(value as string | null)}</SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ALL">Tất cả</SelectItem>
-                        <SelectItem value="ACTIVE">Đang hoạt động</SelectItem>
-                        <SelectItem value="PENDING_CONSENT">Chờ consent</SelectItem>
-                        <SelectItem value="RECONNECT_REQUIRED">Cần kết nối lại</SelectItem>
-                        <SelectItem value="ERROR">Lỗi</SelectItem>
-                        <SelectItem value="DISABLED">Đã tắt</SelectItem>
-                        <SelectItem value="DRAFT">Nháp</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div className="flex-1 min-w-0">
+                  <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Nhà cung cấp</div>
+                  <Select value={providerFilter} onValueChange={(value) => setProviderFilter((value ?? "ALL") as "ALL" | "GMAIL" | "OUTLOOK")}>
+                    <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm text-foreground/95">
+                      <SelectValue>{(value) => getProviderFilterLabel(value as string | null)}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">Tất cả</SelectItem>
+                      <SelectItem value="GMAIL">Gmail</SelectItem>
+                      <SelectItem value="OUTLOOK">Hotmail / Outlook</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="w-full lg:w-[140px] lg:flex-initial">
+                <div className="flex-1 min-w-0">
+                  <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Trạng thái</div>
+                  <Select value={statusFilter} onValueChange={(value) => setStatusFilter((value ?? "ALL") as "ALL" | MailboxStatus)}>
+                    <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm text-foreground/95">
+                      <SelectValue>{(value) => getStatusFilterLabel(value as string | null)}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">Tất cả</SelectItem>
+                      <SelectItem value="ACTIVE">Đang hoạt động</SelectItem>
+                      <SelectItem value="PENDING_CONSENT">Chờ consent</SelectItem>
+                      <SelectItem value="RECONNECT_REQUIRED">Cần kết nối lại</SelectItem>
+                      <SelectItem value="ERROR">Lỗi</SelectItem>
+                      <SelectItem value="DISABLED">Đã tắt</SelectItem>
+                      <SelectItem value="DRAFT">Nháp</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex-1 min-w-0">
                   <div className="mb-1 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">Nhóm</div>
                   <Select value={groupFilter} onValueChange={(value) => setGroupFilter(value ?? "ALL")}>
                     <SelectTrigger className="h-10 w-full rounded-xl px-3 text-sm text-foreground/95">
@@ -801,10 +799,10 @@ export function MailboxesClient({
               <div className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-foreground/88">Thao tác</div>
 
               <div className="grid grid-cols-2 gap-1.5">
-                <Button variant="secondary" size="sm" className="h-8 rounded-lg text-[0.76rem]" onClick={selectAllVisible}>
+                <Button variant="outline" size="sm" className="h-8 rounded-lg text-[0.76rem] btn-action-select" onClick={selectAllVisible}>
                   Chọn tất cả
                 </Button>
-                <Button variant="outline" size="sm" className="h-8 rounded-lg text-[0.76rem]" onClick={clearSelection}>
+                <Button variant="outline" size="sm" className="h-8 rounded-lg text-[0.76rem] btn-action-clear" onClick={clearSelection}>
                   Bỏ chọn
                 </Button>
               </div>
@@ -813,8 +811,9 @@ export function MailboxesClient({
                 <div className="flex-1 min-w-0">
                   <DaysInput value={syncWindowDays} onValueChange={setSyncWindowDays} min={1} max={30} />
                 </div>
-                <Button className="h-10 shrink-0 rounded-xl px-3 text-sm font-semibold" onClick={() => void syncSelected()} disabled={isPending}>
+                <Button className="h-10 shrink-0 rounded-xl px-3 text-sm font-semibold gap-1.5" onClick={() => void syncSelected()} disabled={isPending}>
                   {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                  Đồng bộ
                 </Button>
               </div>
             </div>
@@ -891,7 +890,7 @@ export function MailboxesClient({
                               {mailbox.status !== "ACTIVE" ? (
                                 <Button
                                   type="button"
-                                  variant="ghost"
+                                  variant="outline"
                                   size="icon-sm"
                                   className="rounded-xl text-muted-foreground hover:text-foreground"
                                   title="Copy URL"
@@ -908,7 +907,7 @@ export function MailboxesClient({
                               >
                                 <DropdownMenuTrigger
                                   type="button"
-                                  className="group/button inline-flex size-7 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-all outline-none hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40"
+                                  className="group/button inline-flex size-7 shrink-0 items-center justify-center rounded-xl bg-transparent text-muted-foreground transition-all outline-none hover:bg-accent/60 hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40"
                                   title="Thêm thao tác"
                                   aria-label="Thêm thao tác"
                                   onMouseDown={(event) => event.stopPropagation()}
@@ -1001,7 +1000,7 @@ export function MailboxesClient({
           />
           <div className="mt-2 flex justify-end gap-3">
             <DialogClose
-              render={<Button variant="ghost" className="h-10 rounded-xl px-5 font-semibold transition-all hover:bg-muted" disabled={isPending} />}
+              render={<Button variant="outline" className="h-10 rounded-xl px-5 font-semibold transition-all" disabled={isPending} />}
             >
               Hủy
             </DialogClose>

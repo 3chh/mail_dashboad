@@ -16,13 +16,12 @@ export async function POST() {
   }
 
   try {
-    const dateStr = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 10);
-    const fileName = `mail_dashboard_${dateStr}.dump`;
+    const fileName = `mail_dashboard.dump`;
 
     const command = `pg_dump -h localhost -U postgres -d mail_dashboard -Fc -f ${fileName}`;
 
     // Thêm các đường dẫn PostgreSQL phổ biến trên Mac (Homebrew, Postgres.app)
-    const extraPaths = [
+const extraPaths = [                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
       "/Library/PostgreSQL/17/bin",
       "/usr/local/bin",
       "/Applications/Postgres.app/Contents/Versions/latest/bin",

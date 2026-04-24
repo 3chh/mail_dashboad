@@ -171,39 +171,53 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+
   html {
     @apply font-sans;
   }
+
   html.dark {
     color-scheme: dark;
   }
+
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    @apply cursor-pointer;
+  }
+
   select,
   option,
   optgroup {
     color: inherit;
   }
+
   .dark select {
     color-scheme: dark;
     background-color: color-mix(in oklab, var(--surface-3) 82%, var(--input));
     color: var(--foreground);
   }
+
   .dark option,
   .dark optgroup {
     background-color: color-mix(in oklab, var(--surface-2) 92%, black 8%);
     color: var(--foreground);
   }
+
   h1,
   h2,
   h3,
   h4 {
     @apply font-medium tracking-tight;
   }
+
   code {
     @apply font-mono;
   }
+
   ::selection {
     @apply bg-primary/20 text-foreground;
   }
@@ -256,7 +270,7 @@
   }
 
   .control-surface {
-    border: 1px solid color-mix(in oklab, var(--input) 72%, var(--border));
+    border: 1px solid color-mix(in oklab, var(--input) 48%, var(--border));
     background: linear-gradient(180deg, color-mix(in oklab, var(--surface-3) 82%, transparent), var(--input));
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.035),
@@ -268,7 +282,7 @@
       radial-gradient(circle at top left, rgba(180, 102, 255, 0.08), transparent 34%),
       linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0)),
       linear-gradient(180deg, color-mix(in oklab, var(--surface-3) 86%, rgba(92, 56, 198, 0.08)), var(--input));
-    border-color: rgba(138, 104, 222, 0.34);
+    border-color: rgba(160, 120, 240, 0.58);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.05),
       inset 0 0 0 1px rgba(186, 116, 255, 0.06),
@@ -558,6 +572,7 @@
 
   .glow-primary {
     position: relative;
+
     &::after {
       content: "";
       position: absolute;
@@ -584,12 +599,137 @@
 }
 
 @layer utilities {
+  .dark .btn-tinted {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03));
+  }
+
+  .dark .btn-tinted-info {
+    background: linear-gradient(180deg, rgba(59, 130, 246, 0.32), rgba(37, 99, 235, 0.18)) !important;
+    border-color: rgba(99, 179, 255, 0.70) !important;
+  }
+
+  .dark .btn-tinted-warning {
+    background: linear-gradient(180deg, rgba(245, 158, 11, 0.32), rgba(217, 119, 6, 0.18)) !important;
+    border-color: rgba(253, 186, 116, 0.70) !important;
+  }
+
+  .dark .btn-tinted-success {
+    background: linear-gradient(180deg, rgba(34, 197, 94, 0.32), rgba(22, 163, 74, 0.18)) !important;
+    border-color: rgba(74, 222, 128, 0.70) !important;
+  }
+
+  .btn-action-select {
+    border-color: transparent !important;
+    background: linear-gradient(180deg, oklch(0.66 0.17 281), oklch(0.49 0.15 278)) !important;
+    color: white !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      0 16px 34px -24px rgba(104, 84, 222, 0.62) !important;
+  }
+
+  .btn-action-clear {
+    border-color: transparent !important;
+    background: linear-gradient(180deg, oklch(0.66 0.17 29), oklch(0.49 0.15 27)) !important;
+    color: white !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.14),
+      0 16px 34px -24px rgba(198, 71, 62, 0.6) !important;
+  }
+
+  .btn-refresh-dark {
+    border-color: rgba(255, 255, 255, 0.28) !important;
+    background: linear-gradient(180deg, oklch(0.24 0.018 282), oklch(0.15 0.018 282)) !important;
+    color: white !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 14px 30px -24px rgba(0, 0, 0, 0.72) !important;
+  }
+
+  .btn-plain-white {
+    border-color: rgba(255, 255, 255, 0.36) !important;
+    background: transparent !important;
+    color: white !important;
+    box-shadow: none !important;
+  }
+
+  .btn-action-excel {
+    border-color: transparent !important;
+    background: linear-gradient(180deg, oklch(0.58 0.16 153), oklch(0.38 0.12 153)) !important;
+    color: white !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.15),
+      0 16px 34px -24px rgba(22, 145, 75, 0.64) !important;
+  }
+
+  .btn-action-select:hover,
+  .btn-action-clear:hover,
+  .btn-action-excel:hover,
+  .btn-refresh-dark:hover,
+  .btn-plain-white:hover {
+    color: white !important;
+    filter: brightness(1.07);
+  }
+
+  .btn-refresh-dark:hover {
+    border-color: rgba(255, 255, 255, 0.42) !important;
+  }
+
+  .btn-plain-white:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+  }
+
+  .btn-action-select:active,
+  .btn-action-clear:active,
+  .btn-action-excel:active,
+  .btn-refresh-dark:active,
+  .btn-plain-white:active {
+    filter: brightness(0.96);
+  }
+
+  .dark .btn-action-select {
+    border-color: transparent !important;
+    background: linear-gradient(180deg, rgb(130, 91, 232), rgb(84, 57, 172)) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      0 18px 38px -24px rgba(143, 104, 255, 0.72) !important;
+  }
+
+  .dark .btn-action-clear {
+    border-color: transparent !important;
+    background: linear-gradient(180deg, rgb(176, 76, 82), rgb(119, 48, 60)) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.14),
+      0 18px 38px -24px rgba(214, 79, 88, 0.66) !important;
+  }
+
+  .dark .btn-refresh-dark {
+    border-color: rgba(255, 255, 255, 0.28) !important;
+    background: linear-gradient(180deg, rgb(33, 29, 43), rgb(16, 14, 24)) !important;
+    color: white !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 14px 30px -24px rgba(0, 0, 0, 0.86) !important;
+  }
+
+  .dark .btn-action-excel {
+    border-color: transparent !important;
+    background: linear-gradient(180deg, rgb(19, 132, 73), rgb(9, 88, 53)) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.14),
+      0 18px 38px -24px rgba(28, 190, 99, 0.72) !important;
+  }
+}
+
+@layer utilities {
+
   .no-scrollbar,
   .no-scrollbar [data-slot="scroll-area-viewport"],
   .no-scrollbar [data-radix-scroll-area-viewport],
   .no-scrollbar [data-slot="table-container"] {
     scrollbar-width: none !important;
     -ms-overflow-style: none !important;
+
     &::-webkit-scrollbar {
       display: none !important;
     }

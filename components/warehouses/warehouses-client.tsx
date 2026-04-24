@@ -330,7 +330,7 @@ export function WarehousesClient({ warehouses }: { warehouses: WarehouseRow[] })
           </div>
           <div className="mt-2 flex justify-end gap-3">
             <DialogClose
-              render={<Button variant="ghost" className="h-10 rounded-xl px-5 font-semibold transition-all hover:bg-muted" disabled={isPending} />}
+              render={<Button variant="outline" className="h-10 rounded-xl px-5 font-semibold transition-all" disabled={isPending} />}
             >
               Hủy
             </DialogClose>

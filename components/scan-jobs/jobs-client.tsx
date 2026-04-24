@@ -71,8 +71,10 @@ export function JobsClient({ initialJobs, currentPage, pageSize }: { initialJobs
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [deletingRunId, setDeletingRunId] = useState<string | null>(null);
   const [isDeletingAll, setIsDeletingAll] = useState(false);
+  const [isDeletingData, setIsDeletingData] = useState(false);
   const [runToDelete, setRunToDelete] = useState<ScanRun | null>(null);
   const [confirmDeleteAllOpen, setConfirmDeleteAllOpen] = useState(false);
+  const [confirmDeleteDataOpen, setConfirmDeleteDataOpen] = useState(false);
 
   useEffect(() => {
     setJobs(initialJobs);
@@ -157,6 +159,24 @@ export function JobsClient({ initialJobs, currentPage, pageSize }: { initialJobs
     setRunToDelete(job);
   }
 
+  async function deleteAllSyncedData() {
+    setIsDeletingData(true);
+    try {
+      const response = await fetch("/api/mail-messages", { method: "DELETE" });
+      const payload = (await response.json().catch(() => null)) as { error?: string; deletedCount?: number } | null;
+
+      if (!response.ok) {
+        toast.error(payload?.error ?? "Không xóa được dữ liệu đồng bộ.");
+        return;
+      }
+
+      setConfirmDeleteDataOpen(false);
+      toast.success(`Đã xóa ${payload?.deletedCount ?? 0} email đã đồng bộ.`);
+    } finally {
+      setIsDeletingData(false);
+    }
+  }
+
   function requestDeleteAllHistory() {
     const hasFinishedJobs = jobs.some((job) => isFinishedStatus(job.status));
     if (!hasFinishedJobs) {
@@ -190,19 +210,27 @@ export function JobsClient({ initialJobs, currentPage, pageSize }: { initialJobs
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 md:flex md:w-auto">
+        <div className="flex gap-2">
           <Button
-            variant="destructive"
-            className="h-10 flex-1 rounded-xl px-4 text-sm font-medium md:flex-initial"
+            variant="outline"
+            className="h-10 flex-1 rounded-xl px-4 text-sm font-medium md:flex-initial btn-plain-white"
             onClick={requestDeleteAllHistory}
             disabled={isDeletingAll}
           >
             {isDeletingAll ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-            Xóa toàn bộ
+            Xóa lịch sử
           </Button>
-          <Button variant="outline" className="h-10 flex-1 rounded-xl px-4 text-sm font-medium md:flex-initial" onClick={() => void refreshJobs()} disabled={isRefreshing}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
-            Làm mới
+          <Button
+            variant="destructive"
+            className="h-10 flex-1 rounded-xl px-4 text-sm font-medium md:flex-initial"
+            onClick={() => setConfirmDeleteDataOpen(true)}
+            disabled={isDeletingData}
+          >
+            {isDeletingData ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+            Xóa dữ liệu
+          </Button>
+          <Button variant="outline" className="h-10 w-10 rounded-xl p-0 md:flex-initial btn-refresh-dark" onClick={() => void refreshJobs()} disabled={isRefreshing}>
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
           </Button>
         </div>
       </div>
@@ -238,7 +266,7 @@ export function JobsClient({ initialJobs, currentPage, pageSize }: { initialJobs
 
                   <Dialog>
                     <DialogTrigger
-                      className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-background/50 text-muted-foreground transition-all outline-none hover:bg-accent hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40"
+                      className="inline-flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-[color:var(--primary-border)] bg-background/50 text-muted-foreground transition-all outline-none hover:bg-accent hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40"
                       title="Xem chi tiết"
                       aria-label="Xem chi tiết"
                     >
@@ -306,6 +334,16 @@ export function JobsClient({ initialJobs, currentPage, pageSize }: { initialJobs
         confirmVariant="destructive"
         isPending={isDeletingAll}
         onConfirm={() => void deleteAllHistory()}
+      />
+      <ConfirmActionDialog
+        open={confirmDeleteDataOpen}
+        onOpenChange={setConfirmDeleteDataOpen}
+        title="Xóa dữ liệu đồng bộ"
+        description="Toàn bộ email đã đồng bộ về local (bao gồm OTP và đơn hàng đã phát hiện) sẽ bị xóa vĩnh viễn. Lịch sử job vẫn được giữ nguyên. Tiếp tục?"
+        confirmLabel="Xóa dữ liệu"
+        confirmVariant="destructive"
+        isPending={isDeletingData}
+        onConfirm={() => void deleteAllSyncedData()}
       />
       <ConfirmActionDialog
         open={Boolean(runToDelete)}

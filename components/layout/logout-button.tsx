@@ -35,7 +35,7 @@ export function LogoutButton() {
           </DialogDescription>
         </DialogHeader>
         <div className="flex justify-end gap-3 mt-6">
-          <DialogClose render={<Button variant="ghost" className="h-10 rounded-xl px-5 font-semibold transition-all hover:bg-muted" />}>
+          <DialogClose render={<Button variant="outline" className="h-10 rounded-xl px-5 font-semibold transition-all" />}>
             Hủy
           </DialogClose>
           <Button
