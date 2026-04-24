@@ -799,19 +799,19 @@ export function MailboxesClient({
               <div className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-foreground/88">Thao tác</div>
 
               <div className="grid grid-cols-2 gap-1.5">
-                <Button variant="outline" size="sm" className="h-8 rounded-lg text-[0.76rem] btn-action-select" onClick={selectAllVisible}>
+                <Button variant="outline" className="h-10 rounded-xl px-3 btn-action-select" onClick={selectAllVisible}>
                   Chọn tất cả
                 </Button>
-                <Button variant="outline" size="sm" className="h-8 rounded-lg text-[0.76rem] btn-action-clear" onClick={clearSelection}>
+                <Button variant="outline" className="h-10 rounded-xl px-3 btn-action-clear" onClick={clearSelection}>
                   Bỏ chọn
                 </Button>
               </div>
 
-              <div className="flex gap-1.5 items-center">
-                <div className="flex-1 min-w-0">
+              <div className="grid grid-cols-2 gap-1.5">
+                <div className="min-w-0">
                   <DaysInput value={syncWindowDays} onValueChange={setSyncWindowDays} min={1} max={30} />
                 </div>
-                <Button className="h-10 shrink-0 rounded-xl px-3 text-sm font-semibold gap-1.5" onClick={() => void syncSelected()} disabled={isPending}>
+                <Button className="h-10 w-full rounded-xl px-3 text-sm font-semibold gap-1.5" onClick={() => void syncSelected()} disabled={isPending}>
                   {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                   Đồng bộ
                 </Button>

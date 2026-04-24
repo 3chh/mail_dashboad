@@ -619,21 +619,25 @@
   }
 
   .btn-action-select {
-    border-color: transparent !important;
-    background: linear-gradient(180deg, oklch(0.66 0.17 281), oklch(0.49 0.15 278)) !important;
+    border: 0 !important;
+    background: linear-gradient(180deg, #a855f7, #7c3aed) !important;
     color: white !important;
+    font-size: 0.875rem !important;
+    font-weight: 600 !important;
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.16),
-      0 16px 34px -24px rgba(104, 84, 222, 0.62) !important;
+      inset 0 1px 0 rgba(255, 255, 255, 0.18),
+      0 16px 34px -24px rgba(168, 85, 247, 0.7) !important;
   }
 
   .btn-action-clear {
-    border-color: transparent !important;
-    background: linear-gradient(180deg, oklch(0.66 0.17 29), oklch(0.49 0.15 27)) !important;
+    border: 0 !important;
+    background: linear-gradient(180deg, #be3a68, #8b2d4e) !important;
     color: white !important;
+    font-size: 0.875rem !important;
+    font-weight: 600 !important;
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.14),
-      0 16px 34px -24px rgba(198, 71, 62, 0.6) !important;
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      0 16px 34px -24px rgba(190, 58, 104, 0.68) !important;
   }
 
   .btn-refresh-dark {
@@ -653,12 +657,12 @@
   }
 
   .btn-action-excel {
-    border-color: transparent !important;
-    background: linear-gradient(180deg, oklch(0.58 0.16 153), oklch(0.38 0.12 153)) !important;
+    border: 0 !important;
+    background: linear-gradient(180deg, #10b981, #047857) !important;
     color: white !important;
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.15),
-      0 16px 34px -24px rgba(22, 145, 75, 0.64) !important;
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      0 16px 34px -24px rgba(16, 185, 129, 0.66) !important;
   }
 
   .btn-action-select:hover,
@@ -688,19 +692,19 @@
   }
 
   .dark .btn-action-select {
-    border-color: transparent !important;
-    background: linear-gradient(180deg, rgb(130, 91, 232), rgb(84, 57, 172)) !important;
+    border: 0 !important;
+    background: linear-gradient(180deg, #a855f7, #7c3aed) !important;
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.16),
-      0 18px 38px -24px rgba(143, 104, 255, 0.72) !important;
+      inset 0 1px 0 rgba(255, 255, 255, 0.18),
+      0 18px 38px -24px rgba(168, 85, 247, 0.78) !important;
   }
 
   .dark .btn-action-clear {
-    border-color: transparent !important;
-    background: linear-gradient(180deg, rgb(176, 76, 82), rgb(119, 48, 60)) !important;
+    border: 0 !important;
+    background: linear-gradient(180deg, #be3a68, #8b2d4e) !important;
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.14),
-      0 18px 38px -24px rgba(214, 79, 88, 0.66) !important;
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      0 18px 38px -24px rgba(190, 58, 104, 0.72) !important;
   }
 
   .dark .btn-refresh-dark {
@@ -713,11 +717,11 @@
   }
 
   .dark .btn-action-excel {
-    border-color: transparent !important;
-    background: linear-gradient(180deg, rgb(19, 132, 73), rgb(9, 88, 53)) !important;
+    border: 0 !important;
+    background: linear-gradient(180deg, #10b981, #047857) !important;
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.14),
-      0 18px 38px -24px rgba(28, 190, 99, 0.72) !important;
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      0 18px 38px -24px rgba(16, 185, 129, 0.72) !important;
   }
 }
 
