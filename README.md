@@ -1,277 +1,318 @@
 # Mailbox Center
 
-Web app quan ly tap trung nhieu mailbox Gmail va Hotmail/Outlook ca nhan.
+Ứng dụng web quản lý tập trung nhiều hộp thư Gmail và Hotmail/Outlook cá nhân.
 
-Kien truc hien tai da duoc refactor theo huong:
+## Tổng quan kiến trúc
 
-- admin dang nhap vao web app bang tai khoan he thong rieng
-- moi mailbox Gmail / Hotmail consent 1 lan dau de lay `refresh token`
-- server luu token da ma hoa
-- he thong sync mail ve PostgreSQL theo lich hoac sync tay
-- search, OTP, order extraction doc tren local store
+- Admin đăng nhập bằng tài khoản hệ thống riêng
+- Mỗi mailbox Gmail / Hotmail consent **một lần đầu** để lấy `refresh token`
+- Server lưu token đã mã hoá vào database
+- Hệ thống sync thư về PostgreSQL theo lịch hoặc sync thủ công
+- Search, OTP, trích xuất đơn hàng đọc trên local store
 
-Phase hien tai duoc toi uu cho pilot:
+> **Pilot hiện tại:** tối ưu cho **5 Gmail** + **5 Hotmail**
 
-- `5 Gmail`
-- `5 Hotmail`
+---
 
-## Tinh nang hien co
+## Tính năng hiện có
 
-- admin sign-in bang `CredentialsProvider`
-- tao mailbox Gmail / Outlook trong dashboard
-- connect tung mailbox qua Gmail API hoac Microsoft Graph OAuth
-- luu `refresh token` da ma hoa vao database
-- sync mailbox theo lo
-- local search tren nhieu mailbox da chon
-- OTP monitor theo mailbox
-- order extraction theo mailbox
-- export CSV cho order data
+| Tính năng | Mô tả |
+|---|---|
+| Admin sign-in | Đăng nhập bằng `CredentialsProvider` |
+| Quản lý mailbox | Tạo mailbox Gmail / Outlook trong dashboard |
+| OAuth connect | Kết nối từng mailbox qua Gmail API hoặc Microsoft Graph |
+| Lưu token | `refresh token` được mã hoá, lưu vào database |
+| Sync mail | Sync mailbox theo lô, chọn cửa sổ 1 / 7 / 30 ngày |
+| Local search | Tìm kiếm trên nhiều mailbox đã chọn |
+| OTP monitor | Theo dõi OTP theo từng mailbox |
+| Order extraction | Trích xuất đơn hàng theo mailbox |
+| Export CSV | Xuất dữ liệu đơn hàng ra file CSV |
 
-## Stack
+---
 
-- Next.js 16 App Router
-- React 19
-- NextAuth
-- Prisma + PostgreSQL
-- Gmail API
-- Microsoft Graph API
-- Tailwind + shadcn/ui
+## Tech stack
 
-## Kien truc chinh
+- **Next.js 16** App Router
+- **React 19**
+- **NextAuth**
+- **Prisma** + PostgreSQL
+- **Gmail API**
+- **Microsoft Graph API**
+- **Tailwind CSS** + shadcn/ui
 
-Model du lieu chinh:
+---
 
-- `AdminUser`
-- `Mailbox`
-- `MailboxOAuthState`
-- `MailMessage`
-- `ScanJob`
-- `OtpDetection`
-- `OrderExtraction`
+## Kiến trúc chính
 
-Provider layer:
+### Data models
 
-- `lib/mail/adapters/gmail-api.ts`
-- `lib/mail/adapters/microsoft-graph.ts`
+```
+AdminUser · Mailbox · MailboxOAuthState · MailMessage · ScanJob · OtpDetection · OrderExtraction
+```
 
-Tai lieu lien quan:
+### Provider layer
 
-- [RFC](C:/Users/Hp Victus/Desktop/demo_Gmail - Copy/docs/centralized-mail-platform-rfc.md)
-- [Onboarding Runbook](C:/Users/Hp Victus/Desktop/demo_Gmail - Copy/docs/mailbox-onboarding-runbook.md)
+```
+lib/mail/adapters/gmail-api.ts
+lib/mail/adapters/microsoft-graph.ts
+```
 
-## 1. Tao OAuth credentials
+---
 
-### Gmail API
+## Hướng dẫn cài đặt
 
-1. Mo Google Cloud Console.
-2. Tao project hoac chon project co san.
-3. Enable Gmail API.
-4. Tao `OAuth client ID` loai `Web application`.
-5. Them redirect URI:
+### Bước 1 — Tạo OAuth credentials
 
-```txt
+#### Gmail API
+
+1. Mở [Google Cloud Console](https://console.cloud.google.com).
+2. Tạo project hoặc chọn project có sẵn.
+3. **Enable** Gmail API.
+4. Tạo **OAuth client ID** loại `Web application`.
+5. Thêm redirect URI:
+
+```
 <APP_PUBLIC_URL>/api/oauth/google/callback
 ```
 
-6. Lay `GOOGLE_CLIENT_ID` va `GOOGLE_CLIENT_SECRET`.
+6. Lấy `GOOGLE_CLIENT_ID` và `GOOGLE_CLIENT_SECRET`.
 
-Scope chinh:
+**Scope cần cấp:**
 
-- `openid`
-- `email`
-- `profile`
-- `https://www.googleapis.com/auth/gmail.readonly`
+```
+openid · email · profile · https://www.googleapis.com/auth/gmail.readonly
+```
 
-### Microsoft Graph cho Hotmail / Outlook ca nhan
+#### Microsoft Graph — Hotmail / Outlook cá nhân
 
-1. Mo Microsoft Entra / Azure app registrations.
-2. Tao app registration ho tro `personal Microsoft accounts`.
-3. Cau hinh redirect URI:
+1. Mở [Microsoft Entra — App registrations](https://entra.microsoft.com).
+2. Tạo app registration hỗ trợ **personal Microsoft accounts**.
+3. Cấu hình redirect URI:
 
-```txt
+```
 <APP_PUBLIC_URL>/api/oauth/outlook/callback
 ```
 
-4. Tao client secret.
-5. Cap delegated permissions:
+4. Tạo client secret.
+5. Cấp **delegated permissions:**
 
-- `openid`
-- `email`
-- `profile`
-- `offline_access`
-- `User.Read`
-- `Mail.Read`
-
-6. Lay `MICROSOFT_CLIENT_ID` va `MICROSOFT_CLIENT_SECRET`.
-
-Khuyen nghi de `MICROSOFT_TENANT_ID=consumers`.
-
-## 2. Cau hinh environment variables
-
-Copy file mau:
-
-```bash
-copy .env.example .env
+```
+openid · email · profile · offline_access · User.Read · Mail.Read
 ```
 
-Can dien it nhat:
+6. Lấy `MICROSOFT_CLIENT_ID` và `MICROSOFT_CLIENT_SECRET`.
+
+> Khuyến nghị đặt `MICROSOFT_TENANT_ID=consumers`.
+
+---
+
+### Bước 2 — Cấu hình biến môi trường
+
+```bash
+cp .env.example .env
+```
+
+Điền các giá trị sau vào `.env`:
 
 ```env
 GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
+
 MICROSOFT_CLIENT_ID=...
 MICROSOFT_CLIENT_SECRET=...
 MICROSOFT_TENANT_ID=consumers
+
 ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=change-this-password
 ADMIN_NAME=Mailbox Admin
+
 MAIL_TOKEN_SECRET=replace-with-a-second-long-random-string
 CRON_SECRET=replace-with-a-cron-secret
+OTP_API_TOKEN=replace-with-an-otp-api-token
+
 NEXTAUTH_SECRET=replace-with-a-long-random-string
 APP_PUBLIC_URL=http://localhost:3000
 APP_INTERNAL_URL=http://127.0.0.1:3000
 NEXTAUTH_URL=http://localhost:3000
+
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gmail_dashboard?schema=public"
 ```
 
-Ghi chu:
+**Giải thích các biến quan trọng:**
 
-- `ADMIN_EMAIL` va `ADMIN_PASSWORD` duoc dung de bootstrap admin dau tien
-- `MAIL_TOKEN_SECRET` duoc dung de ma hoa token mailbox trong database
-- `CRON_SECRET` duoc dung cho endpoint cron sync
-- `APP_PUBLIC_URL` la URL public duy nhat cua app, duoc dung cho redirect login va OAuth
-- `APP_INTERNAL_URL` la URL noi bo de server goi lai chinh no neu can
+| Biến | Mục đích |
+|---|---|
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Bootstrap tài khoản admin đầu tiên |
+| `MAIL_TOKEN_SECRET` | Mã hoá refresh token mailbox trong database |
+| `CRON_SECRET` | Xác thực endpoint cron sync |
+| `OTP_API_TOKEN` | Cho phép tool ngoài gọi API lấy OTP (có thể bỏ trống nếu chỉ dùng session web) |
+| `APP_PUBLIC_URL` | URL public duy nhất của app, dùng cho redirect login và OAuth |
+| `APP_INTERNAL_URL` | URL nội bộ để server tự gọi lại nếu cần |
 
-Generate secret neu can:
+Tạo secret ngẫu nhiên:
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-## 3. Cai dependencies
+---
+
+### Bước 3 — Cài dependencies
 
 ```bash
 npm install
 ```
 
-## 4. Khoi tao database
+---
 
-Dam bao PostgreSQL dang chay va database `gmail_dashboard` da ton tai.
+### Bước 4 — Khởi tạo database
 
-Generate Prisma client:
+Đảm bảo PostgreSQL đang chạy và database `gmail_dashboard` đã tồn tại.
 
 ```bash
+# Generate Prisma client
 npm run db:generate
-```
 
-Tao migration va apply vao PostgreSQL:
-
-```bash
+# Tạo migration và apply vào PostgreSQL
 npm run db:migrate
-```
 
-Neu can apply migration tren moi truong deploy:
-
-```bash
+# Apply migration trên môi trường deploy (không tạo migration mới)
 npm run db:apply
-```
 
-Mo Prisma Studio:
-
-```bash
+# Mở Prisma Studio
 npm run db:studio
 ```
 
-## 5. Chay app
+---
+
+### Bước 5 — Chạy app
 
 ```bash
 npm run dev
 ```
 
-Mo:
+Truy cập `<APP_PUBLIC_URL>` trên trình duyệt.
 
-```txt
-<APP_PUBLIC_URL>
-```
+---
 
-## 6. Quy trinh pilot 5 Gmail + 5 Hotmail
+## Hướng dẫn sử dụng (Pilot)
 
-### Dang nhap admin
+### Đăng nhập admin
 
-1. Mo `<APP_PUBLIC_URL>`.
-2. Dang nhap bang `ADMIN_EMAIL` va `ADMIN_PASSWORD`.
+1. Mở `<APP_PUBLIC_URL>`.
+2. Đăng nhập bằng `ADMIN_EMAIL` và `ADMIN_PASSWORD`.
 
-### Tao mailbox
+### Tạo mailbox
 
-1. Vao `Dashboard`.
-2. Nhap email mailbox.
-3. Chon `Gmail` hoac `Hotmail / Outlook`.
-4. Bam `Them mailbox`.
+1. Vào **Dashboard**.
+2. Nhập email mailbox.
+3. Chọn **Gmail** hoặc **Hotmail / Outlook**.
+4. Bấm **Thêm mailbox**.
 
-### Consent tung mailbox
+### Kết nối (consent) từng mailbox
 
-1. Tai dong mailbox, bam `Connect`.
-2. Dang nhap dung account mailbox.
-3. Chap nhan scope doc mail.
-4. Sau callback thanh cong, mailbox se chuyen sang `ACTIVE` neu token duoc luu.
+1. Tại dòng mailbox, bấm **Connect**.
+2. Đăng nhập đúng account mailbox đó.
+3. Chấp nhận scope đọc mail.
+4. Sau callback thành công, mailbox chuyển sang `ACTIVE`.
 
-Luu y:
+> Gmail cá nhân và Hotmail cá nhân đều cần consent **một lần đầu**. Sau đó server giữ refresh token và không cần đăng nhập lại mỗi ngày.
 
-- Gmail ca nhan va Hotmail ca nhan deu can consent tung mailbox mot lan dau
-- sau do server se giu refresh token va khong can login lai moi ngay
+### Sync mail
 
-### Test sync
+1. Chọn một hoặc nhiều mailbox trên dashboard.
+2. Chọn cửa sổ sync: **1**, **7**, hoặc **30** ngày.
+3. Bấm **Sync selected**.
+4. Vào **Sync Jobs** để theo dõi tiến độ.
 
-1. Chon 1 hoac nhieu mailbox tren dashboard.
-2. Chon sync window `1`, `7`, hoac `30` ngay.
-3. Bam `Sync selected`.
-4. Mo `Sync Jobs` de theo doi tien do.
+### Tìm kiếm
 
-### Search local
-
-1. Chon mailbox tren dashboard hoac trong trang `Search`.
-2. Tim theo keyword, sender, date, unread, attachment.
-3. Ket qua doc tu local DB, khong fetch live provider trong request nay.
+1. Chọn mailbox trên dashboard hoặc trong trang **Search**.
+2. Tìm theo keyword, sender, date, unread, attachment.
+3. Kết quả đọc từ local DB — không fetch trực tiếp từ provider.
 
 ### OTP
 
-1. Vao `OTP`.
-2. Chon mailbox.
-3. Loc sender / date / unread neu can.
-4. Copy OTP tu local detections.
+1. Vào **OTP**.
+2. Chọn mailbox.
+3. Lọc theo sender / date / unread nếu cần.
+4. Copy OTP từ local detections.
 
-### Orders
+### Đơn hàng (Orders)
 
-1. Vao `Orders`.
-2. Chon mailbox.
-3. Review merchant, amount, status, item summary.
-4. Export CSV neu can.
+1. Vào **Orders**.
+2. Chọn mailbox.
+3. Xem merchant, amount, status, item summary.
+4. Export CSV nếu cần.
 
-## 7. Scheduled sync
+---
 
-App da co endpoint cron co ban:
+## API lấy OTP (dành cho automation)
 
-```txt
-POST /api/cron/sync
+```
+POST /api/otp
+Authorization: Bearer <OTP_API_TOKEN>
+Content-Type: application/json
 ```
 
-Can header:
+**Request — một mailbox:**
 
-```txt
+```json
+{
+  "emailAddress": "account@example.com"
+}
+```
+
+**Request — nhiều mailbox:**
+
+```json
+{
+  "emailAddress": ["a@example.com", "b@example.com"]
+}
+```
+
+**Response:**
+
+```json
+{
+  "results": [
+    {
+      "mailboxId": "...",
+      "emailAddress": "account@example.com",
+      "code": "123456",
+      "confidenceLabel": "HIGH",
+      "subject": "...",
+      "receivedAt": "2026-04-28T00:00:00.000Z",
+      "error": null
+    }
+  ]
+}
+```
+
+---
+
+## Scheduled sync
+
+Endpoint cron:
+
+```
+POST /api/cron/sync
 Authorization: Bearer <CRON_SECRET>
 ```
 
-Hien tai endpoint nay:
+Hành vi hiện tại:
 
-- lay mailbox `ACTIVE`
-- bo qua mailbox moi sync trong 5 phut gan nhat
-- xep job sync co ban
+- Lấy danh sách mailbox `ACTIVE`
+- Bỏ qua mailbox đã sync trong vòng 5 phút gần nhất
+- Xếp sync job cơ bản
 
-Day la skeleton cho pilot. Neu len production, can doi sang queue ben vung hon.
+> Đây là skeleton cho pilot. Khi lên production cần chuyển sang queue bền vững hơn (BullMQ, v.v.).
 
-## 8. Cac file quan trong
+---
 
-```txt
+## Các file quan trọng
+
+```
 app/(app)/dashboard/page.tsx
 app/(auth)/sign-in/page.tsx
 app/api/mailboxes/route.ts
@@ -290,27 +331,32 @@ lib/jobs/scan-runner.ts
 prisma/schema.prisma
 ```
 
-## 9. Ghi chu ky thuat
+---
 
-- app hien tai dung in-process sync jobs de test pilot nhanh
-- search / OTP / orders la local-first
-- refresh token duoc ma hoa, khong luu plain text
-- schema cu Gmail-demo khong con phu hop voi code hien tai
+## Ghi chú kỹ thuật
 
-## 10. Han che hien tai
+- Sync jobs hiện chạy **in-process** để test pilot nhanh
+- Search / OTP / Orders là **local-first** (đọc từ DB, không fetch live)
+- Refresh token được **mã hoá**, không lưu plain text
 
-- chua co queue ben vung nhu BullMQ
-- chua co batch onboarding tool cho 500 mailbox
-- chua co reconnect UX day du cho token bi revoke
-- chua co auto incremental sync chuan hoa theo cursor/history/delta
-- chua co telemetry va rate-limit handling muc production
+---
 
-## 11. Huong tiep theo
+## Hạn chế hiện tại
 
-Sau pilot, nen lam tiep:
+- Chưa có queue bền vững (BullMQ, v.v.)
+- Chưa có batch onboarding tool cho hàng trăm mailbox
+- Chưa có reconnect UX đầy đủ khi token bị revoke
+- Chưa có auto incremental sync chuẩn hoá theo cursor / history / delta
+- Chưa có telemetry và rate-limit handling mức production
 
-1. queue ben vung cho sync jobs
-2. retry policy + backoff
-3. reconnect flow ro rang cho mailbox loi
-4. dashboard theo doi stale mailbox / token revoke
-5. batch onboarding workflow cho nhieu mailbox
+---
+
+## Hướng tiếp theo
+
+Sau pilot, nên làm tiếp:
+
+1. Queue bền vững cho sync jobs
+2. Retry policy + exponential backoff
+3. Reconnect flow rõ ràng cho mailbox lỗi
+4. Dashboard theo dõi stale mailbox / token revoke
+5. Batch onboarding workflow cho nhiều mailbox
