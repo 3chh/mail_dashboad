@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, ChartColumn, MailSearch, Settings2, ShieldCheck, Workflow } from "lucide-react";
+import { Building2, ChartColumn, MailSearch, Settings2, ShieldCheck, Workflow, Wrench } from "lucide-react";
 import { cn, initialsFromName } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Session } from "next-auth";
@@ -13,6 +13,7 @@ const navigation = [
   { href: "/search", label: "Tìm kiếm", icon: MailSearch },
   { href: "/warehouses", label: "Kho", icon: Building2 },
   { href: "/scan-jobs", label: "Lịch sử đồng bộ", icon: Workflow },
+  { href: "/tools", label: "Công cụ", icon: Wrench },
   { href: "/settings", label: "Cài đặt", icon: Settings2 },
 ];
 

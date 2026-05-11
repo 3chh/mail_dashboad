@@ -10,6 +10,7 @@ const items = [
   { href: "/search", label: "Tìm kiếm" },
   { href: "/warehouses", label: "Kho" },
   { href: "/scan-jobs", label: "Đồng bộ" },
+  { href: "/tools", label: "Công cụ" },
   { href: "/settings", label: "Cài đặt" },
 ];
 

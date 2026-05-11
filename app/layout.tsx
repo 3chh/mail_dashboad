@@ -4,6 +4,8 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/sonner";
 
+import BotpressChat from '@/components/BotpressChat';
+
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
   subsets: ["latin", "vietnamese"],
@@ -39,6 +41,8 @@ export default function RootLayout({
           </div>
           <Toaster richColors closeButton />
         </Providers>
+        {/* {children}
+        <BotpressChat /> */}
       </body>
     </html>
   );
