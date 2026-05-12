@@ -55,13 +55,6 @@ function isMfaUrl(url: string): boolean {
   );
 }
 
-async function humanType(page: any, locator: any, text: string): Promise<void> {
-  await locator.click();
-  try { await locator.fill(""); } catch {}
-  await page.waitForTimeout(rand(400, 900));
-  await locator.pressSequentially(text, { delay: rand(80, 180) });
-}
-
 // ─── OTP ──────────────────────────────────────────────────────────────────────
 
 async function fetchOtp(email: string, otpApi: string, otpToken: string): Promise<string | null> {
@@ -103,15 +96,11 @@ async function pollOtp(
 
 async function findOtpField(page: any): Promise<any | null> {
   const selectors = [
+    'input#authCode',
+    'input[name="dwfrm_factor2Auth_authCode"]',
     'input[autocomplete="one-time-code"]',
-    'input[name*="otp"]',
-    'input[id*="otp"]',
-    'input[name*="code"]',
-    'input[id*="code"]',
     'input[type="text"][maxlength="6"]',
     'input[type="tel"][maxlength="6"]',
-    'input[type="text"]',
-    'input[type="tel"]',
   ];
   for (const sel of selectors) {
     try {
@@ -120,6 +109,96 @@ async function findOtpField(page: any): Promise<any | null> {
     } catch {}
   }
   return null;
+}
+
+// ─── Navigate to Login via Google Search ─────────────────────────────────────
+
+async function navigateToLoginViaSearch(
+  page: any,
+  log: (msg: string, level?: "info" | "warn" | "error") => void,
+): Promise<void> {
+  // B1: Switch UI to Japanese
+  log("B1: Đổi giao diện tiếng Nhật");
+  await page.setExtraHTTPHeaders({ "accept-language": "ja-JP,ja;q=0.9,en;q=0.3" });
+
+  // B2: Search on Google Japan
+  log("B2: Tìm kiếm trên Google Nhật");
+  await page.goto("https://www.google.co.jp", { waitUntil: "domcontentloaded", timeout: 60000 });
+  await page.waitForLoadState("networkidle", { timeout: 20000 }).catch(() => {});
+
+  const searchInput = page.locator('textarea[name="q"], input[name="q"]').first();
+  await searchInput.waitFor({ state: "visible", timeout: 15000 });
+
+  await page.mouse.move(200 + Math.random() * 300, 150 + Math.random() * 200, { steps: 10 });
+  await page.waitForTimeout(rand(400, 800));
+  await searchInput.click();
+  await page.waitForTimeout(rand(300, 600));
+  await searchInput.pressSequentially("ポケモンセンターオンライン ログイン", { delay: rand(100, 160) });
+  await page.waitForTimeout(rand(900, 1600));
+  await searchInput.press("Enter");
+
+  await page.waitForLoadState("networkidle", { timeout: 20000 }).catch(() => {});
+  await page.waitForTimeout(rand(1200, 2000));
+
+  // Scroll like reading results
+  await page.mouse.wheel(0, rand(200, 400));
+  await page.waitForTimeout(rand(600, 1200));
+
+  // B3: Click exact login link
+  log("B3: Tìm và click link login");
+  let navigated = false;
+
+  // Try JS click on the exact <a> tag first
+  try {
+    navigated = await page.evaluate(() => {
+      const links = Array.from(document.querySelectorAll("a")) as HTMLAnchorElement[];
+      const target = links.find((a) => a.href && a.href.includes("pokemoncenter-online.com/login/"));
+      if (target) { target.click(); return true; }
+      return false;
+    });
+  } catch {}
+
+  if (!navigated) {
+    const fallback = page.locator('a[href*="pokemoncenter-online.com/login"]').first();
+    const visible = await fallback.isVisible({ timeout: 5000 }).catch(() => false);
+    if (visible) {
+      const box = await fallback.boundingBox().catch(() => null);
+      if (box) {
+        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 15 });
+        await page.waitForTimeout(rand(300, 600));
+        await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+      } else {
+        await fallback.click();
+      }
+      navigated = true;
+    }
+  }
+
+  if (!navigated) {
+    log("Không tìm thấy link Pokemon Center, fallback goto trực tiếp", "warn");
+    await page.goto(LOGIN_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
+  }
+
+  // Wait until page is truly ready (not fixed sleep)
+  await page.waitForLoadState("domcontentloaded", { timeout: 45000 });
+  await page.waitForLoadState("networkidle", { timeout: 20000 }).catch(() => {});
+
+  // If landed on reset-password, force to login
+  const landedUrl = await page.url();
+  if (landedUrl.includes("reset-password") || !landedUrl.includes("pokemoncenter-online.com")) {
+    log("Redirect bất thường, chuyển thẳng tới trang login", "warn");
+    await page.goto(LOGIN_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
+    await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
+  }
+
+  // Fake reading / mouse movement on login page
+  await page.waitForTimeout(rand(1500, 2800));
+  await page.mouse.move(rand(300, 700), rand(200, 400), { steps: 12 });
+  await page.waitForTimeout(rand(500, 1000));
+  await page.mouse.wheel(0, rand(50, 150));
+  await page.waitForTimeout(rand(400, 800));
+
+  log(`B3 xong, URL: ${await page.url()}`);
 }
 
 // ─── Login ────────────────────────────────────────────────────────────────────
@@ -131,45 +210,58 @@ async function doLogin(
   label: string,
   log: (msg: string, level?: "info" | "warn" | "error") => void,
 ): Promise<LoginOutcome> {
-  const MAX_RETRIES = 5;
+  const MAX_RETRIES = 3;
 
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    log(`Đợi 5s trước khi nhập... (lần ${attempt})`);
-    await page.waitForTimeout(5000);
+  // Đợi form load xong hoàn toàn trước khi nhập
+  const emailField = page.locator('input[type="email"], input[name="email"], input[id*="mail"]').first();
+  const passField  = page.locator('input[type="password"], input[name="password"]').first();
 
-    const url = await page.url();
-    if (isMfaUrl(url)) {
-      log(`Đang ở trang MFA: ${url}`);
-      return "mfa";
+  const emailVisible = await emailField.isVisible({ timeout: 20000 }).catch(() => false);
+  const passVisible  = await passField.isVisible({ timeout: 10000 }).catch(() => false);
+  if (!emailVisible || !passVisible) return "form_not_found";
+
+  // Đợi thêm cho field thực sự enabled
+  await emailField.waitFor({ state: "visible", timeout: 5000 }).catch(() => {});
+  await page.waitForTimeout(rand(600, 1200));
+
+  // B4: Nhập email + password 1 lần duy nhất
+  log("B4: Nhập thông tin đăng nhập");
+  const emailBox = await emailField.boundingBox().catch(() => null);
+  if (emailBox) await page.mouse.move(emailBox.x + emailBox.width / 2, emailBox.y + emailBox.height / 2, { steps: 12 });
+  await page.waitForTimeout(rand(500, 1000));
+  await emailField.click();
+  try { await emailField.fill(""); } catch {}
+  await page.waitForTimeout(rand(400, 800));
+  await emailField.pressSequentially(email, { delay: rand(150, 250) });
+  await page.waitForTimeout(rand(1200, 2000));
+
+  const passBox = await passField.boundingBox().catch(() => null);
+  if (passBox) await page.mouse.move(passBox.x + passBox.width / 2, passBox.y + passBox.height / 2, { steps: 12 });
+  await page.waitForTimeout(rand(500, 1000));
+  await passField.click();
+  try { await passField.fill(""); } catch {}
+  await page.waitForTimeout(rand(400, 800));
+  await passField.pressSequentially(password, { delay: rand(160, 260) });
+  await page.waitForTimeout(rand(1200, 2000));
+
+  // Lần đầu + tối đa 3 lần retry: chỉ bấm nút login lại
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      const retryDelay = rand(5000, 10000);
+      log(`Lỗi Captcha/403 → đợi ${retryDelay}ms rồi bấm login lại (lần ${attempt}/${MAX_RETRIES})`, "warn");
+      await page.waitForTimeout(retryDelay);
     }
-
-    const emailField = page.locator('input[type="email"], input[name="email"], input[id*="mail"]').first();
-    const passField  = page.locator('input[type="password"], input[name="password"]').first();
-    const emailVisible = await emailField.isVisible({ timeout: 15000 }).catch(() => false);
-    const passVisible  = await passField.isVisible({ timeout: 5000 }).catch(() => false);
-
-    if (!emailVisible || !passVisible) {
-      log(`Form login không hiện (lần ${attempt}/${MAX_RETRIES}) → reload...`, "warn");
-      if (attempt === MAX_RETRIES) return "form_not_found";
-      await page.reload({ waitUntil: "domcontentloaded" });
-      await page.waitForTimeout(3000);
-      continue;
-    }
-
-    await humanType(page, emailField, email);
-    await page.waitForTimeout(rand(800, 1500));
-    await humanType(page, passField, password);
-    await page.waitForTimeout(rand(800, 1500));
 
     const loginBtn = page.locator('button[type="submit"], input[type="submit"]').first();
     await loginBtn.hover();
-    await page.waitForTimeout(rand(300, 600));
+    await page.waitForTimeout(rand(400, 800));
     await loginBtn.click();
     await page.waitForTimeout(rand(3000, 5000));
 
     const afterUrl = await page.url();
-    log(`URL sau login (lần ${attempt}): ${afterUrl}`);
+    log(`URL sau login${attempt > 0 ? ` (retry ${attempt})` : ""}: ${afterUrl}`);
 
+    // Check sai mật khẩu
     try {
       const wrongPw = page.locator('text="メールアドレスまたはパスワードが違います"');
       if (await wrongPw.count() > 0 && await wrongPw.isVisible()) return "wrong_password";
@@ -179,6 +271,7 @@ async function doLogin(
     if (!afterUrl.includes("/login")) return "success";
 
     if (attempt === MAX_RETRIES) {
+      // Hết 3 lần retry, đợi thêm 8s xem có redirect không
       for (let w = 0; w < 8; w++) {
         await page.waitForTimeout(1000);
         const lateUrl = await page.url();
@@ -187,10 +280,6 @@ async function doLogin(
       }
       return "captcha_fail";
     }
-
-    log(`Captcha (lần ${attempt}/${MAX_RETRIES}) → reload...`, "warn");
-    await page.reload({ waitUntil: "domcontentloaded" });
-    await page.waitForTimeout(3000);
   }
 
   return "captcha_fail";
@@ -390,20 +479,11 @@ async function processAccount(params: {
   const page = session.page;
 
   try {
-    await wait(3000);
-    let gotoOk = false;
-    for (let g = 1; g <= 3; g++) {
-      try {
-        await page.goto(LOGIN_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
-        gotoOk = true;
-        break;
-      } catch (e: any) {
-        log(`Tải trang login lần ${g}/3 lỗi`, "warn");
-        if (g < 3) await wait(5000);
-      }
-    }
-    if (!gotoOk) {
-      send({ type: "result", label, success: false, error: "Không tải được trang login (proxy lỗi?)" });
+    await wait(2000);
+    try {
+      await navigateToLoginViaSearch(page, log);
+    } catch (e: any) {
+      send({ type: "result", label, success: false, error: `Không vào được trang login: ${e?.message}` });
       return;
     }
 
