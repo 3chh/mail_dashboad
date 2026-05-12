@@ -3,19 +3,21 @@ import { OmniLogin } from "@omnilogin/sdk";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type AccountLine = {
-  proxyId: number;
+  profileName: string;
   email: string;
   password: string;
-  productCode: string;
 };
 
 export type SSEEvent =
   | { type: "log"; label: string; message: string; level?: "info" | "warn" | "error" }
-  | { type: "result"; label: string; success: boolean; step?: string; stepLabel?: string; error?: string }
+  | { type: "result"; label: string; profileName: string; email: string; success: boolean; step?: string; stepLabel?: string; error?: string }
   | { type: "done" };
 
 export type RunParams = {
   accounts: string;
+  productCode: string;
+  concurrency: number;
+  threadProxies: number[]; // proxyId per thread slot (index = worker index)
   otpUrl: string;
   otpKey: string;
   omniHost: string;
@@ -30,9 +32,9 @@ const LOGIN_URL = "https://www.pokemoncenter-online.com/login/";
 const ORDER_URL = "https://www.pokemoncenter-online.com/order-history/";
 
 export const STATUS_MAP: Record<string, { stepLabel: string; step: string }> = {
-  "注文受付済み": { step: "step1", stepLabel: "Đã tiếp nhận đơn" },
-  "発送準備中":   { step: "step2", stepLabel: "Đang chuẩn bị giao" },
-  "発送済み":     { step: "step3", stepLabel: "Đã giao hàng" },
+  "注文受付済み": { step: "step1", stepLabel: "Bước 1" },
+  "発送準備中":   { step: "step2", stepLabel: "Bước 2" },
+  "発送済み":     { step: "step3", stepLabel: "Bước 3" },
 };
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
@@ -148,7 +150,6 @@ async function navigateToLoginViaSearch(
   log("B3: Tìm và click link login");
   let navigated = false;
 
-  // Try JS click on the exact <a> tag first
   try {
     navigated = await page.evaluate(() => {
       const links = Array.from(document.querySelectorAll("a")) as HTMLAnchorElement[];
@@ -179,11 +180,9 @@ async function navigateToLoginViaSearch(
     await page.goto(LOGIN_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
   }
 
-  // Wait until page is truly ready (not fixed sleep)
   await page.waitForLoadState("domcontentloaded", { timeout: 45000 });
   await page.waitForLoadState("networkidle", { timeout: 20000 }).catch(() => {});
 
-  // If landed on reset-password, force to login
   const landedUrl = await page.url();
   if (landedUrl.includes("reset-password") || !landedUrl.includes("pokemoncenter-online.com")) {
     log("Redirect bất thường, chuyển thẳng tới trang login", "warn");
@@ -220,7 +219,6 @@ async function doLogin(
   const passVisible  = await passField.isVisible({ timeout: 10000 }).catch(() => false);
   if (!emailVisible || !passVisible) return "form_not_found";
 
-  // Đợi thêm cho field thực sự enabled
   await emailField.waitFor({ state: "visible", timeout: 5000 }).catch(() => {});
   await page.waitForTimeout(rand(600, 1200));
 
@@ -261,7 +259,6 @@ async function doLogin(
     const afterUrl = await page.url();
     log(`URL sau login${attempt > 0 ? ` (retry ${attempt})` : ""}: ${afterUrl}`);
 
-    // Check sai mật khẩu
     try {
       const wrongPw = page.locator('text="メールアドレスまたはパスワードが違います"');
       if (await wrongPw.count() > 0 && await wrongPw.isVisible()) return "wrong_password";
@@ -271,7 +268,6 @@ async function doLogin(
     if (!afterUrl.includes("/login")) return "success";
 
     if (attempt === MAX_RETRIES) {
-      // Hết 3 lần retry, đợi thêm 8s xem có redirect không
       for (let w = 0; w < 8; w++) {
         await page.waitForTimeout(1000);
         const lateUrl = await page.url();
@@ -370,60 +366,41 @@ async function getOrderStatus(
     return { success: false, error: "Bị redirect về login khi vào trang đơn hàng" };
   }
 
-  log(`Tìm sản phẩm: "${productCode}"`);
-  const statusKeys = Object.keys(STATUS_MAP);
+  log(`Tìm sản phẩm mã: "${productCode}"`);
 
-  const cardSelectors = [
-    `li:has-text("${productCode}")`,
-    `.order-item:has-text("${productCode}")`,
-    `tr:has-text("${productCode}")`,
-  ];
+  // Find the order <li> containing the product image, then read li.finish inside ul.txtList
+  const result: { found: boolean; statusText: string | null } = await page.evaluate((code: string) => {
+    const img = document.querySelector(`img[src*="/img/item/${code}/"]`) as HTMLImageElement | null;
+    if (!img) return { found: false, statusText: null };
 
-  for (const sel of cardSelectors) {
-    try {
-      const card = page.locator(sel).first();
-      if (await card.count() === 0) continue;
-
-      try {
-        const finishLi = card.locator("ul.txtList li[class]");
-        if (await finishLi.count() > 0) {
-          const txt = await finishLi.last().innerText().catch(() => "");
-          for (const jp of statusKeys) {
-            if (txt.includes(jp)) return { success: true, ...STATUS_MAP[jp] };
-          }
-        }
-      } catch {}
-
-      try {
-        const prog = card.locator("progress").first();
-        if (await prog.count() > 0) {
-          const val = Number(await prog.getAttribute("value").catch(() => "0"));
-          const max = Number(await prog.getAttribute("max").catch(() => "100")) || 100;
-          const idx = (val / max) > 0.66 ? 2 : (val / max) > 0.33 ? 1 : 0;
-          return { success: true, ...STATUS_MAP[statusKeys[idx]] };
-        }
-      } catch {}
-
-      const txt = await card.innerText().catch(() => "");
-      for (let si = statusKeys.length - 1; si >= 0; si--) {
-        if (txt.includes(statusKeys[si])) return { success: true, ...STATUS_MAP[statusKeys[si]] };
-      }
-
-      return { success: false, error: "Tìm thấy sản phẩm nhưng không xác định được trạng thái" };
-    } catch {}
-  }
-
-  const bodyText = await page.locator("body").innerText().catch(() => "");
-  if (!bodyText.trim()) return { success: false, error: "Trang lịch sử trống hoặc chưa load xong" };
-
-  if (bodyText.includes(productCode)) {
-    for (let si = statusKeys.length - 1; si >= 0; si--) {
-      if (bodyText.includes(statusKeys[si])) return { success: true, ...STATUS_MAP[statusKeys[si]] };
+    // Walk up to the enclosing order <li>
+    let el: Element | null = img.parentElement;
+    while (el && el.tagName !== "LI") {
+      el = el.parentElement;
     }
+    if (!el) return { found: true, statusText: null };
+
+    // The current step = last li.finish inside ul.txtList
+    const finishEls = el.querySelectorAll("ul.txtList li.finish");
+    if (finishEls.length > 0) {
+      const last = finishEls[finishEls.length - 1] as HTMLElement;
+      return { found: true, statusText: last.innerText.trim() };
+    }
+
+    return { found: true, statusText: null };
+  }, productCode);
+
+  if (!result.found) {
+    return { success: true, step: "not_found", stepLabel: "Không có đơn" };
+  }
+  if (!result.statusText) {
     return { success: false, error: "Tìm thấy sản phẩm nhưng không xác định được trạng thái" };
   }
 
-  return { success: false, error: `Mã "${productCode}" không có trong lịch sử đơn hàng` };
+  const matched = STATUS_MAP[result.statusText];
+  if (matched) return { success: true, ...matched };
+
+  return { success: false, error: `Trạng thái không nhận dạng được: "${result.statusText}"` };
 }
 
 // ─── Parse Accounts ───────────────────────────────────────────────────────────
@@ -435,10 +412,8 @@ export function parseAccounts(accountList: string): AccountLine[] {
     .filter(Boolean)
     .map((line, index) => {
       const parts = line.split("|").map((p) => p.trim());
-      if (parts.length < 4) throw new Error(`Dòng ${index + 1}: sai định dạng. Cần ProxyId|Email|Password|ProductCode`);
-      const proxyId = Number(parts[0]);
-      if (isNaN(proxyId) || proxyId <= 0) throw new Error(`Dòng ${index + 1}: ProxyId không hợp lệ`);
-      return { proxyId, email: parts[1], password: parts[2], productCode: parts[3] };
+      if (parts.length < 3) throw new Error(`Dòng ${index + 1}: sai định dạng. Cần ProfileName|Email|Password`);
+      return { profileName: parts[0], email: parts[1], password: parts[2] };
     });
 }
 
@@ -447,13 +422,15 @@ export function parseAccounts(accountList: string): AccountLine[] {
 async function processAccount(params: {
   omni: any;
   account: AccountLine;
+  proxyId: number;
+  productCode: string;
   otpUrl: string;
   otpKey: string;
   send: (event: SSEEvent) => void;
 }): Promise<void> {
-  const { omni, account, otpUrl, otpKey, send } = params;
-  const { proxyId, email, password, productCode } = account;
-  const label = email.split("@")[0];
+  const { omni, account, proxyId, productCode, otpUrl, otpKey, send } = params;
+  const { profileName, email, password } = account;
+  const label = profileName;
 
   const log = (message: string, level?: "info" | "warn" | "error") => {
     send({ type: "log", label, message, level });
@@ -470,7 +447,7 @@ async function processAccount(params: {
     });
     log(`Tạo profile: ${profile.id}`);
   } catch (e: any) {
-    send({ type: "result", label, success: false, error: `Không tạo được profile: ${e?.message}` });
+    send({ type: "result", label, profileName, email, success: false, error: `Không tạo được profile: ${e?.message}` });
     return;
   }
 
@@ -483,7 +460,7 @@ async function processAccount(params: {
     try {
       await navigateToLoginViaSearch(page, log);
     } catch (e: any) {
-      send({ type: "result", label, success: false, error: `Không vào được trang login: ${e?.message}` });
+      send({ type: "result", label, profileName, email, success: false, error: `Không vào được trang login: ${e?.message}` });
       return;
     }
 
@@ -491,15 +468,15 @@ async function processAccount(params: {
     log(`Kết quả đăng nhập: ${loginOutcome}`);
 
     if (loginOutcome === "wrong_password") {
-      send({ type: "result", label, success: false, error: "Sai tài khoản hoặc mật khẩu" });
+      send({ type: "result", label, profileName, email, success: false, error: "Sai tài khoản hoặc mật khẩu" });
       return;
     }
     if (loginOutcome === "captcha_fail") {
-      send({ type: "result", label, success: false, error: "Lỗi Captcha sau 5 lần thử" });
+      send({ type: "result", label, profileName, email, success: false, error: "Lỗi Captcha sau 3 lần thử" });
       return;
     }
     if (loginOutcome === "form_not_found") {
-      send({ type: "result", label, success: false, error: "Form login không xuất hiện" });
+      send({ type: "result", label, profileName, email, success: false, error: "Form login không xuất hiện" });
       return;
     }
 
@@ -508,11 +485,11 @@ async function processAccount(params: {
       log(`Kết quả OTP: ${otpOutcome}`);
       if (otpOutcome !== "success") {
         const errMap: Record<string, string> = {
-          otp_not_found:  "OTP không tìm thấy sau 60s",
+          otp_not_found:   "OTP không tìm thấy sau 60s",
           field_not_found: "Không tìm thấy ô nhập OTP",
           invalid:         "OTP không hợp lệ sau 3 lần thử",
         };
-        send({ type: "result", label, success: false, error: errMap[otpOutcome] ?? otpOutcome });
+        send({ type: "result", label, profileName, email, success: false, error: errMap[otpOutcome] ?? otpOutcome });
         return;
       }
     }
@@ -522,9 +499,9 @@ async function processAccount(params: {
 
     if (status.success) {
       log(`Kết quả: ${status.stepLabel}`);
-      send({ type: "result", label, success: true, step: status.step, stepLabel: status.stepLabel });
+      send({ type: "result", label, profileName, email, success: true, step: status.step, stepLabel: status.stepLabel });
     } else {
-      send({ type: "result", label, success: false, error: status.error });
+      send({ type: "result", label, profileName, email, success: false, error: status.error });
     }
   } finally {
     await wait(10000);
@@ -543,31 +520,32 @@ async function processAccount(params: {
 async function runWithConcurrency<T>(
   items: T[],
   limit: number,
-  fn: (item: T) => Promise<void>,
+  fn: (item: T, workerIdx: number) => Promise<void>,
 ): Promise<void> {
-  const queue = [...items];
-  async function worker() {
+  const queue = items.map((item, i) => ({ item, originalIdx: i }));
+  async function worker(workerIdx: number) {
     while (queue.length) {
-      const item = queue.shift()!;
-      await fn(item);
+      const entry = queue.shift();
+      if (!entry) break;
+      await fn(entry.item, workerIdx);
     }
   }
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, (_, i) => worker(i)));
 }
 
 export async function runOrderChecks(params: RunParams): Promise<void> {
-  const { accounts, otpUrl, otpKey, omniHost, send } = params;
+  const { accounts, productCode, concurrency, threadProxies, otpUrl, otpKey, omniHost, send } = params;
 
   const accountList = parseAccounts(accounts);
   const omni = new OmniLogin({ host: omniHost, timeout: 60000 });
-  const concurrency = Math.max(1, Number(process.env.POKEMON_CONCURRENCY) || 2);
 
-  await runWithConcurrency(accountList, concurrency, async (account) => {
-    const label = account.email.split("@")[0];
+  await runWithConcurrency(accountList, concurrency, async (account, workerIdx) => {
+    const proxyId = threadProxies[workerIdx];
+    const label = account.profileName;
     try {
-      await processAccount({ omni, account, otpUrl, otpKey, send });
+      await processAccount({ omni, account, proxyId, productCode, otpUrl, otpKey, send });
     } catch (err: any) {
-      send({ type: "result", label, success: false, error: err?.message ?? String(err) });
+      send({ type: "result", label, profileName: account.profileName, email: account.email, success: false, error: err?.message ?? String(err) });
     }
   });
 }

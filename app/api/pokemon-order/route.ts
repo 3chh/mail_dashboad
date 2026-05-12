@@ -6,10 +6,26 @@ export const maxDuration = 300;
 export async function POST(req: Request) {
   await getRequiredAdmin();
 
-  const { accounts } = await req.json() as { accounts: string };
+  const body = await req.json() as {
+    accounts: string;
+    productCode: string;
+    concurrency: number;
+    threadProxies: number[];
+  };
+
+  const { accounts, productCode, concurrency, threadProxies } = body;
 
   if (!accounts?.trim()) {
     return Response.json({ error: "Không có tài khoản nào" }, { status: 400 });
+  }
+  if (!productCode?.trim()) {
+    return Response.json({ error: "Chưa nhập mã sản phẩm" }, { status: 400 });
+  }
+  if (!concurrency || concurrency < 1) {
+    return Response.json({ error: "Số luồng không hợp lệ" }, { status: 400 });
+  }
+  if (!threadProxies || threadProxies.length !== concurrency) {
+    return Response.json({ error: "Cần chọn proxy cho mỗi luồng" }, { status: 400 });
   }
 
   try {
@@ -33,7 +49,7 @@ export async function POST(req: Request) {
       };
 
       try {
-        await runOrderChecks({ accounts, otpUrl, otpKey, omniHost, send });
+        await runOrderChecks({ accounts, productCode, concurrency, threadProxies, otpUrl, otpKey, omniHost, send });
       } catch (e: any) {
         send({ type: "log", label: "system", message: `Lỗi: ${e?.message ?? e}`, level: "error" });
       } finally {
