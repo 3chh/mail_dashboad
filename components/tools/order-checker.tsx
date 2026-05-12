@@ -289,12 +289,6 @@ export function OrderChecker() {
           disabled={running}
           spellCheck={false}
         />
-        <p className="text-xs text-muted-foreground">
-          Mỗi dòng:{" "}
-          <code className="rounded bg-muted/60 px-1 py-0.5 font-mono text-[11px]">
-            ProfileName|Email|Password
-          </code>
-        </p>
       </div>
 
       {/* ── Product Code ── */}
@@ -310,10 +304,6 @@ export function OrderChecker() {
           onChange={(e) => setProductCode(e.target.value.trim())}
           disabled={running}
         />
-        <p className="text-xs text-muted-foreground">
-          Mã nằm trong URL ảnh sản phẩm:{" "}
-          <code className="rounded bg-muted/60 px-1 py-0.5 font-mono text-[11px]">/img/item/{"<mã>"}/</code>
-        </p>
       </div>
 
       {/* ── Threads & Proxies ── */}
