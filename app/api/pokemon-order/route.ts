@@ -10,10 +10,10 @@ export async function POST(req: Request) {
     accounts: string;
     productCode: string;
     concurrency: number;
-    threadProxies: number[];
+    threadProfileIds: string[]; // BitBrowser profile id cho mỗi luồng
   };
 
-  const { accounts, productCode, concurrency, threadProxies } = body;
+  const { accounts, productCode, concurrency, threadProfileIds } = body;
 
   if (!accounts?.trim()) {
     return Response.json({ error: "Không có tài khoản nào" }, { status: 400 });
@@ -24,8 +24,8 @@ export async function POST(req: Request) {
   if (!concurrency || concurrency < 1) {
     return Response.json({ error: "Số luồng không hợp lệ" }, { status: 400 });
   }
-  if (!threadProxies || threadProxies.length !== concurrency) {
-    return Response.json({ error: "Cần chọn proxy cho mỗi luồng" }, { status: 400 });
+  if (!Array.isArray(threadProfileIds) || threadProfileIds.length !== concurrency || threadProfileIds.some((p) => !p)) {
+    return Response.json({ error: "Cần chọn profile cho mỗi luồng" }, { status: 400 });
   }
 
   try {
@@ -34,11 +34,14 @@ export async function POST(req: Request) {
     return Response.json({ error: e.message }, { status: 400 });
   }
 
-  const otpUrl   = process.env.POKEMON_OTP_URL ?? "http://localhost:3000/api/otp";
-  const otpKey   = process.env.OTP_API_TOKEN   ?? "";
-  const omniHost = process.env.OMNILOGIN_HOST  ?? "http://localhost:35353";
+  const otpUrl         = process.env.POKEMON_OTP_URL ?? "http://localhost:3000/api/otp";
+  const otpKey         = process.env.OTP_API_TOKEN   ?? "";
+  const bitBrowserHost = process.env.BITBROWSER_HOST ?? "http://127.0.0.1:54345";
 
   const encoder = new TextEncoder();
+  const abort = new AbortController();
+
+  req.signal?.addEventListener("abort", () => abort.abort(), { once: true });
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -49,13 +52,16 @@ export async function POST(req: Request) {
       };
 
       try {
-        await runOrderChecks({ accounts, productCode, concurrency, threadProxies, otpUrl, otpKey, omniHost, send });
+        await runOrderChecks({ accounts, productCode, concurrency, threadProfileIds, otpUrl, otpKey, bitBrowserHost, send, signal: abort.signal });
       } catch (e: any) {
         send({ type: "log", label: "system", message: `Lỗi: ${e?.message ?? e}`, level: "error" });
       } finally {
         send({ type: "done" });
         controller.close();
       }
+    },
+    cancel() {
+      abort.abort();
     },
   });
 

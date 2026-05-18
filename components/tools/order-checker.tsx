@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/u
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type OmniProxy = { id: number; name?: string; host: string; port: number; proxy_type: string };
+type BitBrowserGroup = { id: string; groupName: string };
+type BitBrowserProfile = { id: string; name: string; seq?: number };
 
 type LogEntry = {
   id: number;
@@ -50,7 +51,6 @@ const LABEL_COLORS = [
   "text-lime-400", "text-orange-400", "text-fuchsia-400",
 ];
 
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function useLabelColor() {
@@ -65,10 +65,6 @@ function useLabelColor() {
   };
 }
 
-function proxyLabel(p: OmniProxy) {
-  return p.name || `${p.host}:${p.port}`;
-}
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const ACCOUNT_PLACEHOLDER = `TenProfile|email@example.com|MatKhau123
@@ -79,9 +75,14 @@ export function OrderChecker() {
   const [accounts, setAccounts] = useState("");
   const [productCode, setProductCode] = useState("");
   const [threadCount, setThreadCount] = useState(1);
-  const [threadProxies, setThreadProxies] = useState<(number | null)[]>([null]);
-  const [proxies, setProxies] = useState<OmniProxy[]>([]);
-  const [proxiesLoading, setProxiesLoading] = useState(false);
+  const [threadProfileIds, setThreadProfileIds] = useState<(string | null)[]>([null]);
+
+  // BitBrowser data
+  const [groups, setGroups] = useState<BitBrowserGroup[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [profiles, setProfiles] = useState<BitBrowserProfile[]>([]);
+  const [groupsLoading, setGroupsLoading] = useState(false);
+  const [profilesLoading, setProfilesLoading] = useState(false);
 
   // Run state
   const [running, setRunning] = useState(false);
@@ -96,23 +97,49 @@ export function OrderChecker() {
   const logsEndRef = useRef<HTMLDivElement>(null);
   const readerRef = useRef<ReadableStreamDefaultReader | null>(null);
   const getLabelColor = useLabelColor();
-  // email → { profileName, password } snapshot trước khi chạy
   const accountMapRef = useRef<Record<string, { profileName: string; password: string }>>({});
 
-  // Fetch proxy list from Omni
-  async function loadProxies() {
-    setProxiesLoading(true);
+  // Fetch groups
+  async function loadGroups() {
+    setGroupsLoading(true);
     try {
-      const res = await fetch("/api/omni-proxies");
+      const res = await fetch("/api/bitbrowser/groups");
       if (res.ok) {
         const data = await res.json();
-        setProxies(data.proxies ?? []);
+        setGroups(data.groups ?? []);
       }
     } catch {}
-    setProxiesLoading(false);
+    setGroupsLoading(false);
   }
 
-  useEffect(() => { loadProxies(); }, []);
+  // Fetch profiles for selected group
+  async function loadProfiles(groupId: string) {
+    setProfilesLoading(true);
+    try {
+      const res = await fetch(`/api/bitbrowser/profiles?groupId=${encodeURIComponent(groupId)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setProfiles(data.profiles ?? []);
+      } else {
+        setProfiles([]);
+      }
+    } catch {
+      setProfiles([]);
+    }
+    setProfilesLoading(false);
+  }
+
+  useEffect(() => { loadGroups(); }, []);
+
+  useEffect(() => {
+    if (selectedGroupId) {
+      loadProfiles(selectedGroupId);
+      // reset thread selections when group changes
+      setThreadProfileIds((prev) => prev.map(() => null));
+    } else {
+      setProfiles([]);
+    }
+  }, [selectedGroupId]);
 
   // Warn before leaving when running or has results
   useEffect(() => {
@@ -126,20 +153,20 @@ export function OrderChecker() {
     return () => window.removeEventListener("beforeunload", handler);
   }, [running, hasFinished]);
 
-  // Sync threadProxies array length with threadCount
+  // Sync threadProfileIds length with threadCount
   function handleThreadCountChange(count: number) {
     setThreadCount(count);
-    setThreadProxies((prev) => {
+    setThreadProfileIds((prev) => {
       const next = [...prev];
       while (next.length < count) next.push(null);
       return next.slice(0, count);
     });
   }
 
-  function setProxyForThread(idx: number, proxyId: number) {
-    setThreadProxies((prev) => {
+  function setProfileForThread(idx: number, profileId: string) {
+    setThreadProfileIds((prev) => {
       const next = [...prev];
-      next[idx] = proxyId;
+      next[idx] = profileId;
       return next;
     });
   }
@@ -155,9 +182,8 @@ export function OrderChecker() {
   async function handleRun(overrideAccounts?: string) {
     const accountsToRun = overrideAccounts ?? accounts;
     if (!accountsToRun.trim() || !productCode.trim()) return;
-    if (threadProxies.some((p) => p === null)) return;
+    if (threadProfileIds.some((p) => p === null)) return;
 
-    // Snapshot email → password trước khi chạy
     accountMapRef.current = {};
     for (const line of accountsToRun.split("\n")) {
       const parts = line.trim().split("|").map((p) => p.trim());
@@ -179,7 +205,7 @@ export function OrderChecker() {
           accounts: accountsToRun,
           productCode: productCode.trim(),
           concurrency: threadCount,
-          threadProxies,
+          threadProfileIds,
         }),
       });
 
@@ -233,7 +259,6 @@ export function OrderChecker() {
     setRunning(false);
   }
 
-  // Re-run only failed accounts
   function handleRerunFailed() {
     const failedLines = results
       .filter((r) => !r.success)
@@ -246,7 +271,6 @@ export function OrderChecker() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  // Export Excel
   async function handleExport() {
     const res = await fetch("/api/pokemon-order/export", {
       method: "POST",
@@ -267,8 +291,13 @@ export function OrderChecker() {
 
   const successCount = results.filter((r) => r.success).length;
   const failedResults = results.filter((r) => !r.success);
-  const allProxiesSelected = threadProxies.every((p) => p !== null);
-  const canRun = !running && accounts.trim() && productCode.trim() && allProxiesSelected;
+  const allProfilesSelected = threadProfileIds.every((p) => p !== null);
+  const canRun = !running && accounts.trim() && productCode.trim() && selectedGroupId && allProfilesSelected;
+
+  function profileLabel(id: string): string {
+    const p = profiles.find((x) => x.id === id);
+    return p?.name ?? id;
+  }
 
   // ─── Render ────────────────────────────────────────────────────────────────
 
@@ -306,33 +335,64 @@ export function OrderChecker() {
         />
       </div>
 
-      {/* ── Threads & Proxies ── */}
+      {/* ── Group + Threads ── */}
       <div className="space-y-3">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Số luồng
           </label>
           <input
             type="number"
             min={1}
-            max={10}
+            max={20}
             value={threadCount}
             onChange={(e) => {
-              const v = Math.min(10, Math.max(1, parseInt(e.target.value) || 1));
+              const v = Math.min(20, Math.max(1, parseInt(e.target.value) || 1));
               handleThreadCountChange(v);
             }}
             disabled={running}
             className="h-8 w-20 rounded-lg border border-border/60 bg-background/60 px-2.5 text-center text-sm text-foreground focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/15 disabled:opacity-50"
           />
 
+          <label className="ml-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Nhóm
+          </label>
+          <Select
+            value={selectedGroupId ?? ""}
+            onValueChange={(v) => { if (v) setSelectedGroupId(v); }}
+            disabled={running || groups.length === 0}
+          >
+            <SelectTrigger className="h-8 w-56 rounded-lg text-xs">
+              {selectedGroupId
+                ? <span>{groups.find((g) => g.id === selectedGroupId)?.groupName ?? selectedGroupId}</span>
+                : <span className="text-muted-foreground">{groupsLoading ? "Đang tải..." : "Chọn nhóm"}</span>}
+            </SelectTrigger>
+            <SelectContent>
+              {groups.map((g) => (
+                <SelectItem key={g.id} value={g.id}>{g.groupName}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <button
-            onClick={loadProxies}
-            disabled={proxiesLoading || running}
+            onClick={loadGroups}
+            disabled={groupsLoading || running}
             className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border/60 bg-background/60 px-3 text-xs text-muted-foreground hover:text-foreground disabled:opacity-40"
           >
-            <RefreshCw className={`h-3 w-3 ${proxiesLoading ? "animate-spin" : ""}`} />
-            Tải proxy
+            <RefreshCw className={`h-3 w-3 ${groupsLoading ? "animate-spin" : ""}`} />
+            Tải nhóm
           </button>
+
+          {selectedGroupId && (
+            <button
+              onClick={() => loadProfiles(selectedGroupId)}
+              disabled={profilesLoading || running}
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border/60 bg-background/60 px-3 text-xs text-muted-foreground hover:text-foreground disabled:opacity-40"
+            >
+              <RefreshCw className={`h-3 w-3 ${profilesLoading ? "animate-spin" : ""}`} />
+              Tải profile
+            </button>
+          )}
         </div>
 
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -342,21 +402,22 @@ export function OrderChecker() {
                 Luồng {i + 1}
               </span>
               <Select
-                value={threadProxies[i] != null ? String(threadProxies[i]) : ""}
-                onValueChange={(v) => setProxyForThread(i, Number(v))}
-                disabled={running || proxies.length === 0}
+                value={threadProfileIds[i] ?? ""}
+                onValueChange={(v) => { if (v) setProfileForThread(i, v); }}
+                disabled={running || profiles.length === 0}
               >
                 <SelectTrigger className="h-7 flex-1 rounded-lg text-xs">
-                  {threadProxies[i] != null
-                    ? <span>{proxyLabel(proxies.find((p) => p.id === threadProxies[i])!)}</span>
-                    : <span className="text-muted-foreground">{proxiesLoading ? "Đang tải..." : "Chọn proxy"}</span>
-                  }
+                  {threadProfileIds[i]
+                    ? <span className="truncate">{profileLabel(threadProfileIds[i]!)}</span>
+                    : <span className="text-muted-foreground">
+                        {!selectedGroupId
+                          ? "Chọn nhóm trước"
+                          : profilesLoading ? "Đang tải..." : "Chọn profile"}
+                      </span>}
                 </SelectTrigger>
                 <SelectContent>
-                  {proxies.map((p) => (
-                    <SelectItem key={p.id} value={String(p.id)}>
-                      {proxyLabel(p)}
-                    </SelectItem>
+                  {profiles.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -364,9 +425,9 @@ export function OrderChecker() {
           ))}
         </div>
 
-        {proxies.length === 0 && !proxiesLoading && (
+        {selectedGroupId && profiles.length === 0 && !profilesLoading && (
           <p className="text-xs text-amber-400">
-            Chưa có proxy nào. Hãy thêm proxy trong Omni rồi bấm &quot;Tải proxy&quot;.
+            Nhóm này chưa có profile nào.
           </p>
         )}
       </div>
@@ -437,7 +498,6 @@ export function OrderChecker() {
       {/* ── Results ── */}
       {results.length > 0 && (
         <div className="space-y-3">
-          {/* Header + actions */}
           <div className="flex flex-wrap items-center gap-3">
             <PackageSearch className="h-4 w-4 text-muted-foreground" />
             <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -455,7 +515,6 @@ export function OrderChecker() {
             </button>
           </div>
 
-          {/* Result list — one row per account */}
           <div className="rounded-xl border border-border/50 bg-[#0c0f18] overflow-hidden">
             {results.map((result, i) => (
               <div
@@ -479,7 +538,6 @@ export function OrderChecker() {
             ))}
           </div>
 
-          {/* Failed accounts */}
           {failedResults.length > 0 && (
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-3">
               <div className="flex items-center gap-2">
