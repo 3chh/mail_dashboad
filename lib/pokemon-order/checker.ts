@@ -355,11 +355,13 @@ async function doLogin(
   log("B4: Nhập thông tin đăng nhập");
   if (!(await typeCredentials())) return "form_not_found";
 
-  // Captcha login: KHÔNG có extension giải. Chỉ click + wait + retry.
-  // 4 click total (1 đầu + 3 retry). Trước click CUỐI: reload page + retype creds
-  // để fresh captcha session.
+  // Captcha login: KHÔNG có extension giải. Click → đợi ngắn → bắt lỗi
+  // captcha/403/URL không đổi → click lại. Trước click CUỐI: reload + retype.
   const MAX_LOGIN_RETRIES = 3;
-  const WAIT_AFTER_CLICK_MS = 60000;
+  const WAIT_AFTER_CLICK_MS = 30000;
+  // 2 lỗi đặc thù Pokemon Center sau click login (log riêng để debug)
+  const CAPTCHA_ERROR_TEXT = "reCAPTCHAの認証に失敗しました。";
+  const RATE_LIMIT_ERROR_TEXT = "エラーが発生しました。時間をおいてから再度お試しください。";
   const loginSelector = 'button[type="submit"], input[type="submit"]';
 
   async function clickLoginBtn(): Promise<boolean> {
@@ -427,17 +429,21 @@ async function doLogin(
     const clicked = await clickLoginBtn();
     if (!clicked) log("Không click được nút login", "warn");
 
-    log(`Click ${attempt + 1}/${MAX_LOGIN_RETRIES + 1}: chờ tối đa ${WAIT_AFTER_CLICK_MS / 1000}s cho URL chuyển...`);
+    log(`Click ${attempt + 1}/${MAX_LOGIN_RETRIES + 1}: chờ ${WAIT_AFTER_CLICK_MS / 1000}s xem URL/captcha/403...`);
     const t0 = Date.now();
     let wrongPassword = false;
+    let captchaFail = false;
+    let rateLimitFail = false;
     try {
       await Promise.race([
         waitForUrl(page, (s) => !s.includes("/login") || isMfaUrl(s), WAIT_AFTER_CLICK_MS),
         waitTextVisible(page, WRONG_PW_TEXT, WAIT_AFTER_CLICK_MS).then(() => { wrongPassword = true; }),
+        waitTextVisible(page, CAPTCHA_ERROR_TEXT, WAIT_AFTER_CLICK_MS).then(() => { captchaFail = true; }),
+        waitTextVisible(page, RATE_LIMIT_ERROR_TEXT, WAIT_AFTER_CLICK_MS).then(() => { rateLimitFail = true; }),
       ]);
-      log(`URL đổi sau ${((Date.now() - t0) / 1000).toFixed(1)}s`);
+      log(`Sự kiện sau ${((Date.now() - t0) / 1000).toFixed(1)}s`);
     } catch {
-      log(`Timeout ${WAIT_AFTER_CLICK_MS / 1000}s — captcha chưa giải xong, sẽ click lại`, "warn");
+      log(`Hết ${WAIT_AFTER_CLICK_MS / 1000}s — không có sự kiện, click lại`, "warn");
     }
 
     if (wrongPassword) return "wrong_password";
@@ -445,6 +451,9 @@ async function doLogin(
     const afterUrl = page.url();
     if (isMfaUrl(afterUrl)) return "mfa";
     if (!afterUrl.includes("/login")) { log(`URL sau login: ${afterUrl}`); return "success"; }
+
+    if (captchaFail) log("⚠️ reCAPTCHA fail (reCAPTCHAの認証に失敗しました) → click lại", "warn");
+    if (rateLimitFail) log("⚠️ 403 / rate-limit (エラーが発生しました。時間をおいてから...) → click lại", "warn");
 
     // Vẫn ở /login → captcha chưa giải / lỗi tạm → retry click
     if (attempt === MAX_LOGIN_RETRIES) {
@@ -731,19 +740,8 @@ async function processAccount(params: {
   log(`Bắt đầu xử lý (profile: ${profileId})`);
   checkAbort(signal);
 
-  // B0: Clear cache (giữ extension data) + random fingerprint
-  try {
-    log("B0a: Clear cache (giữ extension data)...");
-    await bb.clearCacheKeepExtensions(profileId);
-  } catch (e: any) {
-    log(`Clear cache lỗi: ${e?.message} (vẫn tiếp tục)`, "warn");
-  }
-  try {
-    log("B0b: Random fingerprint...");
-    await bb.randomFingerprint(profileId);
-  } catch (e: any) {
-    log(`Random fingerprint lỗi: ${e?.message} (vẫn tiếp tục)`, "warn");
-  }
+  // B0a + B0b ĐÃ BỎ: clearCache/randomFingerprint làm mất extension đã cài.
+  // Profile giữ nguyên trạng thái (cookies + fingerprint) giữa các lần chạy.
 
   // B0c: gọi link xoay IP. Ưu tiên đọc từ profile detail; nếu không có, dùng
   // POKEMON_REFRESH_URL env hoặc URL tạm cứng (provider hiện tại của user).
