@@ -740,8 +740,15 @@ async function processAccount(params: {
   log(`Bắt đầu xử lý (profile: ${profileId})`);
   checkAbort(signal);
 
-  // B0a + B0b ĐÃ BỎ: clearCache/randomFingerprint làm mất extension đã cài.
-  // Profile giữ nguyên trạng thái (cookies + fingerprint) giữa các lần chạy.
+  // B0a: Set flag clearCookiesBeforeLaunch=true → BitBrowser tự xóa cookies
+  // khi /browser/open ở bước sau. Extension được giữ nguyên (chỉ động vào cookies).
+  try {
+    log("B0a: Bật clearCookiesBeforeLaunch (cookies sẽ xóa khi browser mở)...");
+    await bb.enableClearCookiesOnNextOpen(profileId);
+  } catch (e: any) {
+    log(`Bật clearCookiesBeforeLaunch lỗi: ${e?.message} (vẫn tiếp tục)`, "warn");
+  }
+  // B0b ĐÃ BỎ: randomFingerprint làm reset profile, có thể mất extension.
 
   // B0c: gọi link xoay IP. Ưu tiên đọc từ profile detail; nếu không có, dùng
   // POKEMON_REFRESH_URL env hoặc URL tạm cứng (provider hiện tại của user).

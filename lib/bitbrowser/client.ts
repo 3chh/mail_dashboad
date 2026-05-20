@@ -71,6 +71,32 @@ export class BitBrowserClient {
     await this.post("/cache/clear/exceptExtensions", { ids: [profileId] });
   }
 
+  // BitBrowser không có API riêng xóa cookie. Set flag clearCookiesBeforeLaunch=true
+  // → browser sẽ tự xóa cookies trước khi mở lần kế tiếp.
+  // Dùng /browser/update/partial (chỉ cập nhật field chỉ định, không cần
+  // browserFingerPrint). Fallback /browser/update full với fingerprint từ detail.
+  async enableClearCookiesOnNextOpen(profileId: string): Promise<void> {
+    try {
+      await this.post("/browser/update/partial", {
+        ids: [profileId],
+        clearCookiesBeforeLaunch: true,
+      });
+      return;
+    } catch (e1: any) {
+      // Fallback: lấy detail rồi update full
+      try {
+        const detail: any = await this.getProfileDetail(profileId);
+        await this.post("/browser/update", {
+          id: profileId,
+          browserFingerPrint: detail?.browserFingerPrint ?? {},
+          clearCookiesBeforeLaunch: true,
+        });
+      } catch (e2: any) {
+        throw new Error(`partial fail: ${e1?.message} | full fail: ${e2?.message}`);
+      }
+    }
+  }
+
   // Random lại fingerprint mà không động vào các field khác
   async randomFingerprint(profileId: string): Promise<void> {
     await this.post("/browser/fingerprint/random", { browserId: profileId });
