@@ -59,7 +59,7 @@ export function BackupButton() {
     <div className="flex items-center justify-between subpanel-surface rounded-2xl p-4">
       <div className="space-y-0.5">
         <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Sao lưu dữ liệu</p>
-        <p className="text-sm text-muted-foreground mt-1">Xuất và tải về bản sao lưu database (.dump) về máy tính</p>
+        <p className="text-sm text-muted-foreground mt-1">Xuất và tải về bản sao lưu database (.sql) về máy tính</p>
       </div>
       <Button 
         onClick={handleBackup} 

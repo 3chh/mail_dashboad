@@ -3,13 +3,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth-options";
 import { resolveAdminFromSessionUser } from "@/lib/auth/admin";
 import { prisma } from "@/lib/db/prisma";
-import { exec } from "child_process";
-import { promisify } from "util";
-import fs from "fs";
-import path from "path";
-import os from "os";
-
-const execAsync = promisify(exec);
 
 async function generateSqlBackup(): Promise<string> {
   const tables = await prisma.$queryRawUnsafe<{ tablename: string }[]>(
@@ -23,14 +16,20 @@ async function generateSqlBackup(): Promise<string> {
   sql += `SET session_replication_role = 'replica';\n\n`;
 
   for (const { tablename } of tables) {
+    const columnsInfo = await prisma.$queryRawUnsafe<{ column_name: string }[]>(
+      `SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '${tablename}' ORDER BY ordinal_position;`
+    );
+    const columns = columnsInfo.map((c) => c.column_name);
+
+    if (columns.length === 0) continue;
+
     const rows = await prisma.$queryRawUnsafe<Record<string, any>[]>(
       `SELECT * FROM "public"."${tablename}";`
     );
 
     if (!rows || rows.length === 0) continue;
 
-    sql += `-- Table: public.${tablename} (${rows.length} rows)\n`;
-    const columns = Object.keys(rows[0]);
+    sql += `-- Table: public."${tablename}" (${rows.length} rows)\n`;
     const quotedColumns = columns.map((c) => `"${c}"`).join(", ");
 
     for (const row of rows) {
@@ -60,86 +59,11 @@ export async function POST() {
     return NextResponse.json({ error: "Không có quyền truy cập." }, { status: 401 });
   }
 
-  const dbUrl = process.env.DATABASE_URL;
-  if (!dbUrl) {
-    return NextResponse.json({ error: "Chưa cấu hình biến DATABASE_URL." }, { status: 500 });
-  }
-
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const fileNameBase = `mail_dashboard_${timestamp}`;
-  const tempFilePath = path.join(os.tmpdir(), `${fileNameBase}.dump`);
-
-  // 1. Thử chạy pg_dump nếu môi trường server có hỗ trợ
   try {
-    let host = "localhost";
-    let port = "5432";
-    let username = "postgres";
-    let password = "";
-    let database = "mail_dashboard";
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const sqlFileName = `mail_dashboard_${timestamp}.sql`;
 
-    try {
-      const parsed = new URL(dbUrl);
-      host = parsed.hostname || host;
-      port = parsed.port || port;
-      username = decodeURIComponent(parsed.username) || username;
-      password = decodeURIComponent(parsed.password) || password;
-      database = parsed.pathname.replace(/^\//, "").split("?")[0] || database;
-    } catch {}
-
-    const command = `pg_dump -h "${host}" -p "${port}" -U "${username}" -d "${database}" -Fc -f "${tempFilePath}"`;
-
-    const extraPaths = [
-      "/root/.nix-profile/bin",
-      "/nix/var/nix/profiles/default/bin",
-      "/usr/local/bin",
-      "/usr/bin",
-      "/bin",
-      "/Library/PostgreSQL/17/bin",
-      "/Library/PostgreSQL/16/bin",
-      "/opt/homebrew/bin",
-      "C:\\Program Files\\PostgreSQL\\17\\bin",
-      "C:\\Program Files\\PostgreSQL\\16\\bin",
-    ].join(path.delimiter);
-
-    const currentPath = process.env.PATH || "";
-
-    await execAsync(command, {
-      env: {
-        ...process.env,
-        PGPASSWORD: password,
-        PATH: `${extraPaths}${path.delimiter}${currentPath}`,
-      },
-      timeout: 60_000,
-    });
-
-    if (fs.existsSync(tempFilePath)) {
-      const fileBuffer = fs.readFileSync(tempFilePath);
-      try {
-        fs.unlinkSync(tempFilePath);
-      } catch {}
-
-      return new Response(fileBuffer, {
-        status: 200,
-        headers: {
-          "Content-Type": "application/octet-stream",
-          "Content-Disposition": `attachment; filename="${fileNameBase}.dump"`,
-          "Content-Length": fileBuffer.length.toString(),
-        },
-      });
-    }
-  } catch (pgDumpError) {
-    console.warn("pg_dump không khả dụng trên server, tự động chuyển sang xuất SQL trực tiếp:", pgDumpError);
-    if (fs.existsSync(tempFilePath)) {
-      try {
-        fs.unlinkSync(tempFilePath);
-      } catch {}
-    }
-  }
-
-  // 2. Dự phòng thông minh: Nếu server không có pg_dump (như Railway container), query trực tiếp và xuất file .sql
-  try {
     const sqlContent = await generateSqlBackup();
-    const sqlFileName = `${fileNameBase}.sql`;
     const buffer = Buffer.from(sqlContent, "utf-8");
 
     return new Response(buffer, {
@@ -150,10 +74,10 @@ export async function POST() {
         "Content-Length": buffer.length.toString(),
       },
     });
-  } catch (fallbackError: any) {
-    console.error("Lỗi xuất backup dự phòng:", fallbackError);
+  } catch (error: any) {
+    console.error("Backup failed:", error);
     return NextResponse.json(
-      { error: "Sao lưu thất bại: " + (fallbackError?.message || "Lỗi không xác định") },
+      { error: "Sao lưu thất bại: " + (error?.message || "Lỗi không xác định") },
       { status: 500 }
     );
   }
