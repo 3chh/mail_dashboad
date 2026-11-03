@@ -2,4 +2,5 @@
 builder = "NIXPACKS"
 
 [build.nixpacksPlan.phases.setup]
+aptPkgs = ["...", "postgresql-client"]
 nixPkgs = ["...", "postgresql"]
