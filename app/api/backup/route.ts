@@ -4,18 +4,27 @@ import { authOptions } from "@/lib/auth/auth-options";
 import { resolveAdminFromSessionUser } from "@/lib/auth/admin";
 import { prisma } from "@/lib/db/prisma";
 
-async function generateSqlBackup(): Promise<string> {
-  const tables = await prisma.$queryRawUnsafe<{ tablename: string }[]>(
-    `SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename NOT LIKE '_prisma%' ORDER BY tablename;`
-  );
+// Chỉ sao lưu các bảng cốt lõi (Mailbox + Token + Admin + Groups + Warehouses)
+// Bỏ qua hàng chục nghìn dòng logs/messages để sao lưu tức thì và không làm nghẽn server
+const CORE_TABLES = [
+  "AdminUser",
+  "MailboxGroup",
+  "Warehouse",
+  "Mailbox",
+  "MailboxOAuthState",
+];
 
-  let sql = `-- Mailbox Center Database Backup (SQL Export)\n`;
-  sql += `-- Generated at: ${new Date().toISOString()}\n\n`;
+async function generateCoreBackup(): Promise<string> {
+  let sql = `-- =====================================================================\n`;
+  sql += `-- Mailbox Center: Bản sao lưu cốt lõi (Core Credentials & Mailboxes)\n`;
+  sql += `-- Tạo lúc: ${new Date().toISOString()}\n`;
+  sql += `-- Mục đích: Giữ nguyên vẹn 500+ Mailbox & Token để không phải kết nối lại\n`;
+  sql += `-- =====================================================================\n\n`;
   sql += `SET statement_timeout = 0;\n`;
   sql += `SET client_encoding = 'UTF8';\n`;
   sql += `SET session_replication_role = 'replica';\n\n`;
 
-  for (const { tablename } of tables) {
+  for (const tablename of CORE_TABLES) {
     const columnsInfo = await prisma.$queryRawUnsafe<{ column_name: string }[]>(
       `SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '${tablename}' ORDER BY ordinal_position;`
     );
@@ -29,7 +38,7 @@ async function generateSqlBackup(): Promise<string> {
 
     if (!rows || rows.length === 0) continue;
 
-    sql += `-- Table: public."${tablename}" (${rows.length} rows)\n`;
+    sql += `-- Bảng: public."${tablename}" (${rows.length} bản ghi)\n`;
     const quotedColumns = columns.map((c) => `"${c}"`).join(", ");
 
     for (const row of rows) {
@@ -61,9 +70,9 @@ export async function POST() {
 
   try {
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const sqlFileName = `mail_dashboard_${timestamp}.sql`;
+    const sqlFileName = `mailbox_core_backup_${timestamp}.sql`;
 
-    const sqlContent = await generateSqlBackup();
+    const sqlContent = await generateCoreBackup();
     const buffer = Buffer.from(sqlContent, "utf-8");
 
     return new Response(buffer, {
@@ -75,7 +84,7 @@ export async function POST() {
       },
     });
   } catch (error: any) {
-    console.error("Backup failed:", error);
+    console.error("Core backup failed:", error);
     return NextResponse.json(
       { error: "Sao lưu thất bại: " + (error?.message || "Lỗi không xác định") },
       { status: 500 }
