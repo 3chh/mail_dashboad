@@ -48,10 +48,13 @@ export async function POST() {
     const command = `pg_dump -h "${host}" -p "${port}" -U "${username}" -d "${database}" -Fc -f "${tempFilePath}"`;
 
     const extraPaths = [
-      "/Library/PostgreSQL/17/bin",
-      "/Library/PostgreSQL/16/bin",
+      "/root/.nix-profile/bin",
+      "/nix/var/nix/profiles/default/bin",
       "/usr/local/bin",
       "/usr/bin",
+      "/bin",
+      "/Library/PostgreSQL/17/bin",
+      "/Library/PostgreSQL/16/bin",
       "/opt/homebrew/bin",
       "C:\\Program Files\\PostgreSQL\\17\\bin",
       "C:\\Program Files\\PostgreSQL\\16\\bin",
