@@ -175,6 +175,87 @@ console.log("=== RUNNING OTP EXTRACTION TEST SUITE ===\n");
   assert(res.length === 1 && res[0].code === "482913", "Date filtered out and real OTP extracted (482913)");
 }
 
+// Case 15: Postal code in Pokemon Center footer (〒106-6147)
+{
+  const res = extractOtpCandidates({
+    subject: "Pokemon Newsletter",
+    bodyText: "株式会社ポケモン ポケモンセンターオンライン 〒106-6147 東京都港区六本木6-10-1 六本木ヒルズ森タワー47階",
+    fromHeader: "info@pokemoncenter-online.com"
+  });
+  assert(res.length === 0, "Pokemon postal code 〒106-6147 is NOT treated as OTP");
+}
+
+// Case 16: Postal code in Bandai footer (〒108-0073)
+{
+  const res = extractOtpCandidates({
+    subject: "Bandai Spirits Newsletter",
+    bodyText: "株式会社BANDAI SPIRITS 〒108-0073 東京都港区三田3-5-27 住友不動産三田タワー",
+    fromHeader: "shop_news@p-bandai.jp"
+  });
+  assert(res.length === 0, "Bandai postal code 〒108-0073 is NOT treated as OTP");
+}
+
+// Case 17: Postal code with English label (Zip code: 106-6147)
+{
+  const res = extractOtpCandidates({
+    subject: "Shipping details",
+    bodyText: "Package shipping destination. Postal code: 106-6147, Tokyo Japan.",
+    fromHeader: "shipping@carrier.com"
+  });
+  assert(res.length === 0, "Postal code with label is NOT treated as OTP");
+}
+
+// Case 18: Postal code in Vietnamese (Mã bưu chính: 100-000)
+{
+  const res = extractOtpCandidates({
+    subject: "Thông tin văn phòng",
+    bodyText: "Địa chỉ nhận hồ sơ tại Hà Nội, Mã bưu chính: 100-000, Việt Nam.",
+    fromHeader: "contact@company.vn"
+  });
+  assert(res.length === 0, "Vietnamese postal code is NOT treated as OTP");
+}
+
+// Case 19: Separated number without OTP keyword
+{
+  const res = extractOtpCandidates({
+    subject: "Product Catalog",
+    bodyText: "Product model number is 456-789. Please check user manual.",
+    fromHeader: "catalog@shop.com"
+  });
+  assert(res.length === 0, "Separated number 456-789 without OTP keyword is rejected");
+}
+
+// Case 20: Both postal code in footer AND real OTP in body
+{
+  const res = extractOtpCandidates({
+    subject: "[ポケモンセンターオンライン]ログイン用パスコードのお知らせ",
+    bodyText: `ログイン用パスコードをお知らせします。パスコード入力画面に下記のコードを入力してください。
+
+【パスコード】701722
+
+※パスコードの有効期限は5分間です。
+
+━━━━━━━━━━━━━━━━━━━━
+発行・配信元 株式会社ポケモン ポケモンセンターオンライン 〒106-6147 東京都港区六本木6-10-1
+━━━━━━━━━━━━━━━━━━━━`,
+    fromHeader: "info@pokemoncenter-online.com"
+  });
+  assert(res.length === 1 && res[0].code === "701722", "Extracted real OTP (701722) while rejecting postal code (106-6147)");
+}
+
+// Case 21: Real Pokemon newsletter from live mailboxes fottakthyerefux / monatqyorba
+{
+  const res = extractOtpCandidates({
+    subject: "【ポケカ】抽選販売の応募を受付中！【11月10日（火）16時59分まで】",
+    bodyText: `拡張パック「ハドウシーカー」の抽選応募をチェックしてね！
+このメールを Web ページとして表示するには、 こちらをクリックして下さい。
+メールマガジン 2026年11月6日号
+発行・配信元 株式会社ポケモン ポケモンセンターオンライン 〒106-6147 東京都港区六本木6-10-1 六本木ヒルズ森タワー47階 ©Pokémon/Nintendo/Creatures/GAME FREAK`,
+    fromHeader: "ポケモンセンターオンライン <info@pokemoncenter-online.com>"
+  });
+  assert(res.length === 0, "Real Pokemon newsletter produces 0 candidates (no fake 1066147 OTP)");
+}
+
 console.log(`\n========================================`);
 console.log(`RESULTS: ${passed} PASSED, ${failed} FAILED`);
 console.log(`========================================\n`);

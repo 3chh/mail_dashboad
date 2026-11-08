@@ -68,6 +68,7 @@ const plainPattern = /\b\d{4,8}\b/g;
 
 const currencyBeforePattern = /(?:[$€£¥₫₩]|usd|vnd|jpy|eur|yen|đ)\s?$/i;
 const currencyAfterPattern = /^\s?(?:[$€£¥₫₩円元]|usd|vnd|jpy|eur|yen|đồng|dong|đ\b|k\b)/i;
+const postalBeforePattern = /(?:[〒〶]|郵便番号|\b(?:zip(?:\s*code)?|postal(?:\s*code)?|bưu\s*chính|mã\s*bưu\s*(?:chính|điện)|buu\s*chinh|ma\s*buu\s*(?:chinh|dien))\b)[\s:=]*$/i;
 
 type MatchKind = "plain" | "separated" | "prefixed";
 
@@ -185,6 +186,11 @@ function isCurrency(source: string, start: number, length: number) {
   return currencyBeforePattern.test(before) || currencyAfterPattern.test(after);
 }
 
+function isPostalCode(source: string, start: number) {
+  const before = source.slice(Math.max(0, start - 25), start);
+  return postalBeforePattern.test(before);
+}
+
 /** Số nằm trong cụm lớn hơn: ngày (12/05/2024), giờ (12:30), số tiền (1,234.56), số điện thoại (090-123-4567). */
 function isPartOfLargerNumber(source: string, start: number, length: number) {
   const prev = source[start - 1] ?? "";
@@ -203,6 +209,9 @@ function isExcluded(source: string, match: RawMatch) {
     return true;
   }
   if (isHexColor(source, index) || isCurrency(source, index, length)) {
+    return true;
+  }
+  if (isPostalCode(source, index)) {
     return true;
   }
   if (kind === "prefixed") {
@@ -246,7 +255,7 @@ function collectRawMatches(source: string) {
   return matches.sort((left, right) => left.index - right.index);
 }
 
-/** Lọc theo quy tắc keyword: 4-5 số và mã tách bằng dấu cách bắt buộc có từ khóa OTP gần đó. */
+/** Lọc theo quy tắc keyword: 4-5 số và mọi mã separated bắt buộc có từ khóa OTP gần đó. */
 function collectValidMatches(source: string) {
   return collectRawMatches(source)
     .map((match) => {
@@ -268,7 +277,7 @@ function collectValidMatches(source: string) {
       if (isYear(match.code) || isCompactDate(match.code)) {
         return false;
       }
-      return !(match.kind === "separated" && match.rawCode.includes(" "));
+      return match.kind !== "separated";
     });
 }
 
@@ -307,7 +316,11 @@ function tryGuaranteed(matches: ValidMatch[], score: number) {
   if (unique.length !== 1 || unique[0].code.length < 6) {
     return null;
   }
-  return [toCandidate(unique[0], score, "HIGH")];
+  const match = unique[0];
+  if (isYear(match.code) || isCompactDate(match.code)) {
+    return null;
+  }
+  return [toCandidate(match, score, "HIGH")];
 }
 
 export function extractOtpCandidates(args: {

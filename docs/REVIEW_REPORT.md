@@ -1,29 +1,29 @@
 **[APPROVED]**
 
-Tôi đã kiểm tra trực tiếp trên mã nguồn hiện tại, không chỉ đọc patch, và tự chạy lại các bước kiểm tra:
+Bản sửa đúng theo SPEC và có thể merge.
 
-- **Test:** `npx tsx tests/otp-extractor.test.ts` cho kết quả 16 PASSED, 0 FAILED.
-- **Kiểu dữ liệu:** `npx tsc --noEmit` không báo lỗi.
-- **Build:** tôi không chạy lại `npm run build`.
-- **Thử thêm vài trường hợp ngoài bộ test:**
-  - `１２３４５６` dạng full-width sau `認証コード` được nhận đúng, mức HIGH.
-  - `482 913` có từ khóa được nhận là `482913`, mức HIGH.
-  - Facebook 5 số kèm "mã xác nhận" được nhận, mức MEDIUM.
-  - Số điện thoại `090-123-4567` bị loại.
-  - `Order #123456` bị loại.
+**Cách tôi kiểm tra:** đọc diff của `lib/extractors/otp.ts`, đối chiếu từng Module trong `docs/SPEC.md`, rồi tự chạy lại test và một số câu thử của riêng tôi. `npx tsx tests/otp-extractor.test.ts` cho kết quả **23 passed, 0 failed**. Tôi không chạy lại `npm run build` và không thử lại trên 2 mailbox hotmail thật.
 
-**Đối chiếu từng lỗi của lượt trước**
-1. **Lọc năm và ngày:** `getLocalClause` và `isPrecededByDateLabel` đã có. Ngày dạng 8 số bị loại khi đứng sau nhãn ngày hoặc không có từ khóa OTP. Test 13 và 14 đều đạt.
-2. **Microsoft Graph:** khi `folder === "inbox"` thì đọc đúng `/me/mailFolders/inbox/messages`, cùng phạm vi với `in:inbox` bên Gmail.
-3. **Dọn code:** `resolveOtpSourceText` và các import thừa trong `lib/queries/app-data.ts` đã được xóa.
+**1. Đúng đắn và an toàn**
+- `isPostalCode` chỉ xét tối đa 25 ký tự trước mã, và mẫu regex buộc nhãn phải đứng sát mã (`[\s:=]*$`). Vì vậy không chặn nhầm khi chữ "postal" nằm ở chỗ khác trong thư.
+- Regex không có lượng từ lồng nhau và đầu vào bị giới hạn, nên không có nguy cơ treo máy do regex (ReDoS).
+- Lớp chặn này đặt trong `isExcluded()`, trước nhánh `prefixed`, đúng như Module 1 yêu cầu.
 
-**Đánh giá chất lượng:** code bám sát SPEC ở cả 4 module.
-- Thứ tự quét `prefixed` → `separated` → `plain` có cơ chế chống trùng vùng, nên không cắt đôi mã.
-- Các bộ lọc loại trừ (link, mã màu, tiền, số trong cụm lớn hơn) được tách hàm rõ ràng.
-- Phản hồi của `/api/otp` vẫn giữ các trường cũ, chỉ thêm `rawCode` và `folder`.
+**2. Loại mã bưu chính và mã gạch ngang không từ khóa**
+- Thư có `Your verification code is 123456. Ship to postal code 1066147` chỉ trả về `123456`.
+- Thư có `郵便番号 1066147 認証コード 482913` chỉ trả về `482913`.
+- `〒106-6147`, `Zip: 482913`, `Mã bưu chính 100000` đều trả về rỗng.
+- Trong `collectValidMatches()`, mã có từ khóa hoặc mã `prefixed` đã được giữ lại ở bước trước. Vì vậy lệnh `return false` cho `separated` chỉ loại mã gạch ngang hoặc dấu cách **không có từ khóa**, đúng Module 2.
 
-**Điểm nhỏ, không chặn merge, có thể xử lý sau:**
-- `lib/mail/service.ts`, hàm `scanRefsForOtp`: email mới nhất chỉ được giữ lại khi chính email đầu tiên trong danh sách tải thành công (`i === 0`). Nếu email đó lỗi, mailbox không có OTP sẽ trả về `message: null`, dù các email sau tải được. Nên giữ email đầu tiên tải thành công thay vì cố định vị trí 0.
-- Mỗi mailbox có thể tốn tới 13 lần gọi API tuần tự (10 email inbox + 3 email junk). Với hơn 500 mailbox, nên theo dõi độ trễ và giới hạn tốc độ (rate limit) của provider.
-- Câu như "Your code is 4821" không được nhận, vì chữ "code" đứng một mình không nằm trong danh sách từ khóa. Hành vi này đúng SPEC, nhưng nên ghi nhận lại.
-- Các file tạm chưa được git theo dõi (`fix_*.py`, `clean_types.py`, `git_diff.patch`, `prompt_p5*.txt`) không nên đưa vào commit.
+**3. Không hồi quy**
+- `456-789` có từ khóa vẫn ra `456789`, còn `456-789` không có từ khóa bị loại.
+- `G-123456` và mã số full-width Nhật (`８４２９１３` ra `842913`) vẫn được nhận.
+- Lớp chặn `isYear` và `isCompactDate` trong `tryGuaranteed()` chỉ ngăn những mã đó được đẩy thẳng lên HIGH. Chúng vẫn có thể được chấm điểm theo đường thường.
+
+**Vài điểm nhỏ, không chặn merge:**
+- `otp.ts:189`: SPEC ghi xét 20 ký tự, code dùng 25. Nên sửa một trong hai cho khớp; 25 cũng hợp lý.
+- `otp.ts:258`: docstring vẫn ghi "mã tách bằng dấu cách", cần sửa thành "mã `separated`".
+- Có thể gộp đoạn `if (match.kind === "separated") return false; return true;` thành `return match.kind !== "separated";`.
+- Trước khi commit, nên xoá hoặc thêm vào `.gitignore` các file tạm: `git_diff.patch` và `prompt_p*.txt`.
+
+**Chất lượng mã:** thay đổi nhỏ, đúng chỗ, không đụng đến luồng khác. Test đã phủ cả trường hợp cần loại và trường hợp OTP hợp lệ.
