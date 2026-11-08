@@ -6,10 +6,25 @@ function normalizeWhitespace(value: string) {
   return value.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
 }
 
-function htmlToPlainText(value: string) {
+// Ép mọi block element xuống dòng để chữ/số của các ô, đoạn liền kề không bị dính nhau.
+const blockSelectors = ["table", "tr", "td", "th", "p", "div", "li", "h1", "h2", "h3", "h4"].map(
+  (selector) => ({
+    selector,
+    format: "block",
+    options: { leadingLineBreaks: 1, trailingLineBreaks: 1 },
+  }),
+);
+
+export function htmlToPlainText(value: string) {
   return convert(value, {
     wordwrap: false,
-    selectors: [{ selector: "a", options: { hideLinkHrefIfSameAsText: true } }],
+    selectors: [
+      { selector: "a", options: { hideLinkHrefIfSameAsText: true } },
+      { selector: "img", format: "skip" },
+      { selector: "style", format: "skip" },
+      { selector: "script", format: "skip" },
+      ...blockSelectors,
+    ],
   });
 }
 

@@ -27,6 +27,7 @@ export type NormalizedMailMessage = {
 
 export type OtpCandidate = {
   code: string;
+  rawCode: string;
   confidenceScore: number;
   confidenceLabel: ConfidenceLabel;
   matchedKeywords: string[];

@@ -207,6 +207,7 @@ export async function listMicrosoftMessageRefs(args: {
   mailbox: Mailbox;
   lookbackDays?: number;
   maxResults: number;
+  folder?: "inbox" | "junkemail";
 }) {
   const params = new URLSearchParams({
     "$top": String(args.maxResults),
@@ -217,9 +218,15 @@ export async function listMicrosoftMessageRefs(args: {
     const since = new Date(Date.now() - args.lookbackDays * 24 * 60 * 60 * 1000).toISOString();
     params.set("$filter", `receivedDateTime ge ${since}`);
   }
+  const folderPath =
+    args.folder === "junkemail"
+      ? "/me/mailFolders/junkemail/messages"
+      : args.folder === "inbox"
+        ? "/me/mailFolders/inbox/messages"
+        : "/me/messages";
   const payload = (await graphFetch(
     args.mailbox,
-    `/me/messages?${params.toString()}`,
+    `${folderPath}?${params.toString()}`,
   )) as {
     value?: Array<{ id?: string; conversationId?: string | null }>;
   };

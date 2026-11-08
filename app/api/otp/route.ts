@@ -98,6 +98,8 @@ export async function POST(request: Request) {
       mailboxId: result.mailbox?.id ?? null,
       emailAddress: result.mailbox?.emailAddress ?? null,
       code: result.latestCandidate?.code ?? null,
+      rawCode: result.latestCandidate?.rawCode ?? result.latestCandidate?.code ?? null,
+      folder: result.folder ?? "INBOX",
       confidenceScore: result.latestCandidate?.confidenceScore ?? null,
       confidenceLabel: result.latestCandidate?.confidenceLabel ?? null,
       subject: result.message?.subject ?? null,

@@ -114,11 +114,21 @@ export async function listGmailMessageRefs(args: {
   mailbox: Mailbox;
   lookbackDays?: number;
   maxResults: number;
+  folder?: "inbox" | "junkemail";
 }) {
   const gmail = await getGmailClient(args.mailbox);
+  const qParts: string[] = [];
+  if (typeof args.lookbackDays === "number") {
+    qParts.push(`newer_than:${args.lookbackDays}d`);
+  }
+  if (args.folder === "junkemail") {
+    qParts.push("in:spam");
+  } else if (args.folder === "inbox") {
+    qParts.push("in:inbox");
+  }
   const response = await gmail.users.messages.list({
     userId: "me",
-    q: typeof args.lookbackDays === "number" ? `newer_than:${args.lookbackDays}d` : undefined,
+    q: qParts.length > 0 ? qParts.join(" ") : undefined,
     maxResults: args.maxResults,
   });
 

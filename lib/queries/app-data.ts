@@ -1,8 +1,7 @@
 import type { ScanJobStatus } from "@prisma/client";
 import { convert } from "html-to-text";
 import { prisma } from "@/lib/db/prisma";
-import { extractOtpCandidates } from "@/lib/extractors/otp";
-import { fetchLatestMessageForMailbox } from "@/lib/mail/service";
+import { fetchRecentOtpMessageForMailbox } from "@/lib/mail/service";
 import {
   extractAddressLine,
   extractNumericSortValue,
@@ -74,10 +73,6 @@ function extractFromAddress(fromEmail: string | null, fromHeader: string | null)
   return fromHeader?.trim() || "N/A";
 }
 
-function resolveOtpSourceText(message: NormalizedMailMessage) {
-  return (message.normalizedText || message.plainTextBody || message.snippet || "").trim();
-}
-
 function resolveOrderSourceText(message: {
   plainTextBody: string | null;
   htmlBody: string | null;
@@ -120,14 +115,19 @@ export async function getOtpMonitorData(mailboxIds: string[]) {
           message: null,
           latestCandidate: null,
           candidateCount: 0,
+          folder: "INBOX" as const,
           errorMessage: "Mailbox không tồn tại hoặc không còn quyền truy cập.",
         };
       }
 
       try {
-        const message = await fetchLatestMessageForMailbox({
+        const otpResult = await fetchRecentOtpMessageForMailbox({
           mailbox,
+          maxScan: 10,
         });
+
+        const message = otpResult.message;
+        const candidates = otpResult.candidates;
 
         if (!message) {
           return {
@@ -136,15 +136,10 @@ export async function getOtpMonitorData(mailboxIds: string[]) {
             message: null,
             latestCandidate: null,
             candidateCount: 0,
+            folder: "INBOX" as const,
             errorMessage: null,
           };
         }
-
-        const candidates = extractOtpCandidates({
-          subject: message.subject,
-          bodyText: resolveOtpSourceText(message),
-          fromHeader: message.fromHeader,
-        });
 
         return {
           id: `${mailboxId}-${message.remoteMessageId}`,
@@ -152,6 +147,7 @@ export async function getOtpMonitorData(mailboxIds: string[]) {
           message,
           latestCandidate: candidates[0] ?? null,
           candidateCount: candidates.length,
+          folder: otpResult.folder,
           errorMessage: null,
         };
       } catch (error) {
@@ -161,6 +157,7 @@ export async function getOtpMonitorData(mailboxIds: string[]) {
           message: null,
           latestCandidate: null,
           candidateCount: 0,
+          folder: "INBOX" as const,
           errorMessage: error instanceof Error ? error.message : "Không thể lấy mail mới nhất từ provider.",
         };
       }

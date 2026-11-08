@@ -106,6 +106,11 @@ export default async function OtpPage({ searchParams }: OtpPageProps) {
                       <div className="flex flex-wrap items-center gap-3">
                         <Badge variant="outline">{result.mailbox?.emailAddress ?? "Mailbox không xác định"}</Badge>
                         {candidate ? <ConfidenceBadge value={candidate.confidenceLabel} /> : null}
+                        {result.folder === "JUNK" ? (
+                          <Badge variant="secondary" className="bg-amber-500/15 text-amber-500 border-amber-500/30">
+                            Thư rác (Spam)
+                          </Badge>
+                        ) : null}
                         {result.errorMessage ? <Badge variant="destructive">Lỗi fetch live mail</Badge> : null}
                         {labels.includes("UNREAD") ? <Badge variant="outline">Chưa đọc</Badge> : null}
                         {!result.message && !result.errorMessage ? <Badge variant="outline">Mailbox chưa có mail</Badge> : null}
