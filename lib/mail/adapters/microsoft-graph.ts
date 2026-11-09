@@ -152,9 +152,8 @@ export async function requestMicrosoftTokenRefresh(args: {
 
   const scopeCandidates = isCustomClient
     ? [
-        MICROSOFT_GRAPH_SCOPES.join(" "),
-        "offline_access https://graph.microsoft.com/Mail.Read https://graph.microsoft.com/User.Read",
         "https://graph.microsoft.com/.default offline_access",
+        MICROSOFT_GRAPH_SCOPES.join(" "),
       ]
     : [
         MICROSOFT_GRAPH_SCOPES.join(" "),
@@ -269,14 +268,29 @@ export async function getMicrosoftAccessToken(mailbox: Mailbox) {
 }
 
 async function graphFetch(mailbox: Mailbox, path: string) {
-  const accessToken = await getMicrosoftAccessToken(mailbox);
-  const response = await fetch(`https://graph.microsoft.com/v1.0${path}`, {
+  let accessToken = await getMicrosoftAccessToken(mailbox);
+  let response = await fetch(`https://graph.microsoft.com/v1.0${path}`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
       Prefer: 'outlook.body-content-type="html"',
     },
     cache: "no-store",
   });
+
+  // If 401 Unauthorized / InvalidAuthenticationToken, the cached access token may be stale or corrupt.
+  // Force a fresh refresh from Microsoft and retry once.
+  if (response.status === 401) {
+    try {
+      accessToken = (await refreshMicrosoftAccessToken(mailbox)) ?? accessToken;
+      response = await fetch(`https://graph.microsoft.com/v1.0${path}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Prefer: 'outlook.body-content-type="html"',
+        },
+        cache: "no-store",
+      });
+    } catch {}
+  }
 
   if (!response.ok) {
     const detail = await readMicrosoftError(response);
