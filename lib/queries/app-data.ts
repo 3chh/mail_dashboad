@@ -458,6 +458,15 @@ function buildBatchLogs(run: {
   successMailboxCount: number;
   failedMailboxCount: number;
   totalSavedCount: number;
+  jobs?: Array<{
+    id: string;
+    status: ScanJobStatus;
+    errorMessage: string | null;
+    mailbox: {
+      emailAddress: string;
+      provider: string;
+    };
+  }>;
 }) {
   const logs = [
     {
@@ -467,6 +476,19 @@ function buildBatchLogs(run: {
       createdAt: run.startedAt ?? run.createdAt,
     },
   ];
+
+  if (run.jobs) {
+    for (const job of run.jobs) {
+      if (job.status === "FAILED" || job.errorMessage) {
+        logs.push({
+          id: `${job.id}-error`,
+          level: "error",
+          message: `Lỗi [${job.mailbox.emailAddress}]: ${job.errorMessage || "Đồng bộ thất bại"}`,
+          createdAt: run.completedAt ?? run.createdAt,
+        });
+      }
+    }
+  }
 
   if (run.status === "COMPLETED" || run.status === "FAILED") {
     logs.push({

@@ -130,6 +130,79 @@ export async function exchangeMicrosoftCode(code: string) {
   };
 }
 
+export async function requestMicrosoftTokenRefresh(args: {
+  refreshToken: string;
+  clientId?: string | null;
+}) {
+  const customClientId = args.clientId?.trim() || null;
+  const isCustomClient = Boolean(customClientId && customClientId !== process.env.MICROSOFT_CLIENT_ID);
+  const clientId = isCustomClient ? customClientId! : (process.env.MICROSOFT_CLIENT_ID ?? "");
+
+  const tenant = process.env.MICROSOFT_TENANT_ID ?? "consumers";
+  const endpoints = isCustomClient
+    ? [
+        `https://login.microsoftonline.com/consumers/oauth2/v2.0/token`,
+        `https://login.microsoftonline.com/common/oauth2/v2.0/token`,
+      ]
+    : [getTokenUrl()];
+
+  // Microsoft v2.0 refresh requires scope.
+  // https://graph.microsoft.com/.default requests all previously consented scopes.
+  const scopeCandidates = [
+    "https://graph.microsoft.com/.default offline_access",
+    MICROSOFT_GRAPH_SCOPES.join(" "),
+  ];
+
+  let lastErrorDetail = "Không rõ lỗi";
+
+  for (const endpoint of endpoints) {
+    for (const scope of scopeCandidates) {
+      const params = new URLSearchParams({
+        client_id: clientId,
+        grant_type: "refresh_token",
+        refresh_token: args.refreshToken,
+        scope,
+      });
+
+      if (!isCustomClient) {
+        if (process.env.MICROSOFT_CLIENT_SECRET) {
+          params.set("client_secret", process.env.MICROSOFT_CLIENT_SECRET);
+        }
+        params.set("redirect_uri", getMicrosoftCallbackUrl());
+      }
+
+      try {
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: params,
+        });
+
+        if (response.ok) {
+          const token = (await response.json()) as {
+            access_token?: string;
+            refresh_token?: string;
+            expires_in?: number;
+            scope?: string;
+          };
+
+          if (token.access_token) {
+            return token;
+          }
+        } else {
+          lastErrorDetail = await readMicrosoftError(response);
+        }
+      } catch (err: any) {
+        lastErrorDetail = err.message || String(err);
+      }
+    }
+  }
+
+  throw new Error(`Trao đổi token Microsoft thất bại: ${lastErrorDetail}`);
+}
+
 async function refreshMicrosoftAccessToken(mailbox: Mailbox) {
   const refreshToken = decryptSecret(mailbox.refreshTokenEncrypted);
 
@@ -148,46 +221,10 @@ async function refreshMicrosoftAccessToken(mailbox: Mailbox) {
     customClientId = mailbox.externalUserId.trim();
   }
 
-  const isCustomClient = Boolean(customClientId && customClientId !== process.env.MICROSOFT_CLIENT_ID);
-  const clientId = isCustomClient ? customClientId! : (process.env.MICROSOFT_CLIENT_ID ?? "");
-
-  const params = new URLSearchParams({
-    client_id: clientId,
-    grant_type: "refresh_token",
-    refresh_token: refreshToken,
+  const token = await requestMicrosoftTokenRefresh({
+    refreshToken,
+    clientId: customClientId,
   });
-
-  if (!isCustomClient) {
-    if (process.env.MICROSOFT_CLIENT_SECRET) {
-      params.set("client_secret", process.env.MICROSOFT_CLIENT_SECRET);
-    }
-    params.set("redirect_uri", getMicrosoftCallbackUrl());
-    params.set("scope", MICROSOFT_GRAPH_SCOPES.join(" "));
-  }
-
-  const tokenUrl = isCustomClient
-    ? "https://login.microsoftonline.com/common/oauth2/v2.0/token"
-    : getTokenUrl();
-
-  const response = await fetch(tokenUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: params,
-  });
-
-  if (!response.ok) {
-    const detail = await readMicrosoftError(response);
-    throw new Error(`Trao đổi token Microsoft thất bại: ${detail}`);
-  }
-
-  const token = (await response.json()) as {
-    access_token?: string;
-    refresh_token?: string;
-    expires_in?: number;
-    scope?: string;
-  };
 
   await prisma.mailbox.update({
     where: {

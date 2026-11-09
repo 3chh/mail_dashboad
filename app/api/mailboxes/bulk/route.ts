@@ -6,12 +6,80 @@ import { authOptions } from "@/lib/auth/auth-options";
 import { resolveAdminFromSessionUser } from "@/lib/auth/admin";
 import { prisma } from "@/lib/db/prisma";
 import { encryptSecret } from "@/lib/mail/token-vault";
+import { requestMicrosoftTokenRefresh } from "@/lib/mail/adapters/microsoft-graph";
 
 const bulkImportSchema = z.object({
   rawText: z.string().min(1, "Vui lòng nhập danh sách mail."),
   groupId: z.string().trim().optional().or(z.literal("")),
   newGroupName: z.string().trim().max(80).optional().or(z.literal("")),
 });
+
+function parseMailboxLine(line: string) {
+  const delimiter = line.includes("|") ? "|" : "\t";
+  const rawParts = line.split(delimiter).map((p) => p.trim()).filter(Boolean);
+
+  if (rawParts.length === 0) return null;
+
+  let email: string | null = null;
+  let recoveryEmail: string | null = null;
+  let clientId: string | null = null;
+  let refreshToken: string | null = null;
+  let password: string | null = null;
+
+  // UUID pattern for Azure Client ID: 8-4-4-4-12 hex chars (or 32 hex chars)
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const hex32Regex = /^[0-9a-f]{32}$/i;
+
+  const emails: string[] = [];
+  const otherParts: string[] = [];
+
+  for (const part of rawParts) {
+    if (part.includes("@") && !part.includes(" ")) {
+      emails.push(part.toLowerCase());
+    } else {
+      otherParts.push(part);
+    }
+  }
+
+  if (emails.length > 0) {
+    email = emails[0];
+    if (emails.length > 1) {
+      recoveryEmail = emails[1];
+    }
+  } else {
+    email = rawParts[0]?.toLowerCase() ?? null;
+  }
+
+  for (const part of otherParts) {
+    if (uuidRegex.test(part) || hex32Regex.test(part)) {
+      clientId = part;
+    } else if (part.length > 50) {
+      // Refresh token is always long (>50 chars, typically 100-800 chars)
+      refreshToken = part;
+    } else if (!password) {
+      password = part;
+    } else if (!recoveryEmail && part.includes("@")) {
+      recoveryEmail = part;
+    }
+  }
+
+  // Fallback to standard positional mapping if not found by heuristics:
+  // email|pass|token|id|recoveryEmail
+  if (!refreshToken && rawParts[2] && rawParts[2].length > 20) {
+    refreshToken = rawParts[2];
+  }
+  if (!clientId && rawParts[3]) {
+    clientId = rawParts[3];
+  }
+  if (!password && rawParts[1]) {
+    password = rawParts[1];
+  }
+  if (!recoveryEmail && rawParts[4]) {
+    recoveryEmail = rawParts[4];
+  }
+
+  return { email, password, refreshToken, clientId, recoveryEmail };
+}
 
 async function resolveMailboxGroup(adminUserId: string, args: { groupId?: string; newGroupName?: string }) {
   const newGroupName = args.newGroupName?.trim();
@@ -85,22 +153,13 @@ export async function POST(request: Request) {
   const errors: string[] = [];
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    // Tách theo pipe (|), nếu không có thì thử tách theo tab (\t)
-    const delimiter = line.includes("|") ? "|" : "\t";
-    const parts = line.split(delimiter).map((p) => p.trim());
-
-    const email = parts[0]?.toLowerCase();
-    if (!email || !email.includes("@") || email.includes(" ")) {
-      errors.push(`Dòng ${i + 1}: Email không hợp lệ ("${parts[0] || ""}")`);
+    const parsedLine = parseMailboxLine(lines[i]);
+    if (!parsedLine || !parsedLine.email || !parsedLine.email.includes("@")) {
+      errors.push(`Dòng ${i + 1}: Không thể nhận diện email hợp lệ.`);
       continue;
     }
 
-    const password = parts[1] || null;
-    const token = parts[2] || null;
-    const clientId = parts[3] || null;
-    const recoveryEmail = parts[4] || null;
-
+    const { email, password, refreshToken, clientId, recoveryEmail } = parsedLine;
     const isGmail = email.endsWith("@gmail.com") || email.endsWith("@googlemail.com");
     const provider = isGmail ? MailProvider.GMAIL : MailProvider.OUTLOOK;
 
@@ -110,7 +169,37 @@ export async function POST(request: Request) {
     if (recoveryEmail) notesPayload.recoveryEmail = recoveryEmail;
 
     const notesString = Object.keys(notesPayload).length > 0 ? JSON.stringify(notesPayload) : null;
-    const hasOAuthToken = Boolean(token);
+    const hasOAuthToken = Boolean(refreshToken);
+
+    let accessTokenToSave: string | null = null;
+    let rotatedRefreshToken = refreshToken;
+    let tokenExpiresAt: Date | null = null;
+    let initialStatus: MailboxStatus = hasOAuthToken ? MailboxStatus.ACTIVE : MailboxStatus.PENDING_CONSENT;
+    let initialError: string | null = null;
+
+    if (hasOAuthToken && provider === MailProvider.OUTLOOK) {
+      try {
+        const refreshed = await requestMicrosoftTokenRefresh({
+          refreshToken: refreshToken!,
+          clientId,
+        });
+
+        if (refreshed.access_token) {
+          accessTokenToSave = refreshed.access_token;
+          if (refreshed.refresh_token) {
+            rotatedRefreshToken = refreshed.refresh_token;
+          }
+          if (refreshed.expires_in) {
+            tokenExpiresAt = new Date(Date.now() + refreshed.expires_in * 1000);
+          }
+          initialStatus = MailboxStatus.ACTIVE;
+        }
+      } catch (tokenErr: any) {
+        initialStatus = MailboxStatus.ERROR;
+        initialError = tokenErr.message || "Lỗi kiểm tra token Microsoft.";
+        errors.push(`Dòng ${i + 1} (${email}): ${initialError}`);
+      }
+    }
 
     try {
       await prisma.mailbox.upsert({
@@ -121,19 +210,19 @@ export async function POST(request: Request) {
           provider,
           groupId,
           createdById: admin.id,
-          lastError: null,
+          lastError: initialError,
+          status: initialStatus,
+          externalUserId: clientId || undefined,
+          notes: notesString,
           ...(hasOAuthToken
             ? {
-                status: MailboxStatus.ACTIVE,
                 authType: MailboxAuthType.OAUTH,
-                refreshTokenEncrypted: encryptSecret(token!),
+                refreshTokenEncrypted: encryptSecret(rotatedRefreshToken!),
+                accessTokenEncrypted: accessTokenToSave ? encryptSecret(accessTokenToSave) : undefined,
+                tokenExpiresAt: tokenExpiresAt || undefined,
                 consentedAt: new Date(),
-                externalUserId: clientId || undefined,
-                notes: notesString,
               }
-            : {
-                notes: notesString,
-              }),
+            : {}),
         },
         create: {
           emailAddress: email,
@@ -141,16 +230,19 @@ export async function POST(request: Request) {
           authType: MailboxAuthType.OAUTH,
           groupId,
           createdById: admin.id,
-          status: hasOAuthToken ? MailboxStatus.ACTIVE : MailboxStatus.PENDING_CONSENT,
-          refreshTokenEncrypted: hasOAuthToken ? encryptSecret(token!) : null,
+          status: initialStatus,
+          refreshTokenEncrypted: hasOAuthToken ? encryptSecret(rotatedRefreshToken!) : null,
+          accessTokenEncrypted: accessTokenToSave ? encryptSecret(accessTokenToSave) : null,
+          tokenExpiresAt,
           consentedAt: hasOAuthToken ? new Date() : null,
           externalUserId: clientId || null,
           notes: notesString,
+          lastError: initialError,
         },
       });
 
       importedCount++;
-      if (hasOAuthToken) {
+      if (initialStatus === MailboxStatus.ACTIVE) {
         activeCount++;
       }
     } catch (err: any) {
@@ -166,4 +258,3 @@ export async function POST(request: Request) {
     errors,
   });
 }
-

@@ -326,7 +326,7 @@ export function JobsClient({ initialJobs, currentPage, pageSize }: { initialJobs
               <div className="space-y-2">
                 {job.logs.map((log) => (
                   <div key={log.id} className="subpanel-surface rounded-2xl px-4 py-3">
-                    <p className="text-sm font-medium">{log.message}</p>
+                    <p className={`text-sm font-medium ${log.level === "error" ? "text-destructive font-semibold" : ""}`}>{log.message}</p>
                     <p className="mt-1 text-xs text-muted-foreground">{formatDateTime(log.createdAt)}</p>
                   </div>
                 ))}
