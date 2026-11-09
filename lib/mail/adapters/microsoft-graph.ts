@@ -138,20 +138,22 @@ export async function requestMicrosoftTokenRefresh(args: {
   const isCustomClient = Boolean(customClientId && customClientId !== process.env.MICROSOFT_CLIENT_ID);
   const clientId = isCustomClient ? customClientId! : (process.env.MICROSOFT_CLIENT_ID ?? "");
 
-  const tenant = process.env.MICROSOFT_TENANT_ID ?? "consumers";
   const endpoints = isCustomClient
     ? [
-        `https://login.microsoftonline.com/consumers/oauth2/v2.0/token`,
-        `https://login.microsoftonline.com/common/oauth2/v2.0/token`,
+        "https://login.microsoftonline.com/consumers/oauth2/v2.0/token",
+        "https://login.microsoftonline.com/common/oauth2/v2.0/token",
       ]
-    : [getTokenUrl()];
+    : Array.from(new Set(["https://login.microsoftonline.com/consumers/oauth2/v2.0/token", getTokenUrl()]));
 
-  // Microsoft v2.0 refresh requires scope.
-  // https://graph.microsoft.com/.default requests all previously consented scopes.
-  const scopeCandidates = [
-    "https://graph.microsoft.com/.default offline_access",
-    MICROSOFT_GRAPH_SCOPES.join(" "),
-  ];
+  const scopeCandidates = isCustomClient
+    ? [
+        "https://graph.microsoft.com/.default offline_access",
+        MICROSOFT_GRAPH_SCOPES.join(" "),
+      ]
+    : [
+        MICROSOFT_GRAPH_SCOPES.join(" "),
+        "https://graph.microsoft.com/.default offline_access",
+      ];
 
   let lastErrorDetail = "Không rõ lỗi";
 
@@ -216,9 +218,6 @@ async function refreshMicrosoftAccessToken(mailbox: Mailbox) {
       const parsedNotes = JSON.parse(mailbox.notes);
       if (parsedNotes?.clientId) customClientId = String(parsedNotes.clientId).trim();
     } catch {}
-  }
-  if (!customClientId && mailbox.externalUserId) {
-    customClientId = mailbox.externalUserId.trim();
   }
 
   const token = await requestMicrosoftTokenRefresh({
