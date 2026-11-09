@@ -217,8 +217,8 @@ async function refreshMicrosoftAccessToken(mailbox: Mailbox) {
     throw new Error("Thiếu refresh token Microsoft.");
   }
 
-  let customClientId: string | null = null;
-  if (mailbox.notes) {
+  let customClientId: string | null = (mailbox as any).customClientId?.trim() || null;
+  if (!customClientId && mailbox.notes) {
     try {
       const parsedNotes = JSON.parse(mailbox.notes);
       if (parsedNotes?.clientId) customClientId = String(parsedNotes.clientId).trim();

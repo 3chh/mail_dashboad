@@ -212,7 +212,8 @@ export async function POST(request: Request) {
           createdById: admin.id,
           lastError: initialError,
           status: initialStatus,
-          externalUserId: clientId || undefined,
+          customClientId: clientId || undefined,
+          recoveryEmail: recoveryEmail || undefined,
           notes: notesString,
           ...(hasOAuthToken
             ? {
@@ -235,7 +236,8 @@ export async function POST(request: Request) {
           accessTokenEncrypted: accessTokenToSave ? encryptSecret(accessTokenToSave) : null,
           tokenExpiresAt,
           consentedAt: hasOAuthToken ? new Date() : null,
-          externalUserId: clientId || null,
+          customClientId: clientId || null,
+          recoveryEmail: recoveryEmail || null,
           notes: notesString,
           lastError: initialError,
         },

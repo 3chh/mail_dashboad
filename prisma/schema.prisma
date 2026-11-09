@@ -102,6 +102,8 @@ model Mailbox {
   lastSyncCursor        String?
   lastError             String?
   notes                 String?
+  customClientId        String?
+  recoveryEmail         String?
   groupId               String?
   createdById           String?
   createdAt             DateTime           @default(now())

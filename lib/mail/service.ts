@@ -22,6 +22,8 @@ const mailboxIdentitySelect = {
   lastSyncCursor: true,
   lastError: true,
   notes: true,
+  customClientId: true,
+  recoveryEmail: true,
   groupId: true,
   createdById: true,
   createdAt: true,
