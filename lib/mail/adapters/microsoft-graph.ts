@@ -31,12 +31,17 @@ async function readMicrosoftError(response: Response) {
   const raw = await response.text();
 
   try {
-    const payload = JSON.parse(raw) as {
-      error?: string;
-      error_description?: string;
-      error_codes?: number[];
-    };
-    const parts = [payload.error, payload.error_description, payload.error_codes?.length ? `codes=${payload.error_codes.join(",")}` : null].filter(Boolean);
+    const payload = JSON.parse(raw) as any;
+    if (payload?.error && typeof payload.error === "object") {
+      const code = payload.error.code || "";
+      const message = payload.error.message || "";
+      return [code, message].filter(Boolean).join(": ") || raw;
+    }
+    const parts = [
+      typeof payload?.error === "string" ? payload.error : null,
+      payload?.error_description,
+      payload?.error_codes?.length ? `codes=${payload.error_codes.join(",")}` : null,
+    ].filter(Boolean);
     return parts.join(" | ") || raw || `HTTP ${response.status}`;
   } catch {
     return raw || `HTTP ${response.status}`;
@@ -147,8 +152,9 @@ export async function requestMicrosoftTokenRefresh(args: {
 
   const scopeCandidates = isCustomClient
     ? [
-        "https://graph.microsoft.com/.default offline_access",
         MICROSOFT_GRAPH_SCOPES.join(" "),
+        "offline_access https://graph.microsoft.com/Mail.Read https://graph.microsoft.com/User.Read",
+        "https://graph.microsoft.com/.default offline_access",
       ]
     : [
         MICROSOFT_GRAPH_SCOPES.join(" "),
@@ -301,12 +307,30 @@ export async function listMicrosoftMessageRefs(args: {
       : args.folder === "inbox"
         ? "/me/mailFolders/inbox/messages"
         : "/me/messages";
-  const payload = (await graphFetch(
-    args.mailbox,
-    `${folderPath}?${params.toString()}`,
-  )) as {
-    value?: Array<{ id?: string; conversationId?: string | null }>;
-  };
+  let payload: { value?: Array<{ id?: string; conversationId?: string | null }> };
+  try {
+    payload = (await graphFetch(
+      args.mailbox,
+      `${folderPath}?${params.toString()}`,
+    )) as {
+      value?: Array<{ id?: string; conversationId?: string | null }>;
+    };
+  } catch (err: any) {
+    if (params.has("$filter") || params.has("$orderby")) {
+      const fallbackParams = new URLSearchParams({
+        "$top": String(args.maxResults),
+        "$select": "id,conversationId",
+      });
+      payload = (await graphFetch(
+        args.mailbox,
+        `${folderPath}?${fallbackParams.toString()}`,
+      )) as {
+        value?: Array<{ id?: string; conversationId?: string | null }>;
+      };
+    } else {
+      throw err;
+    }
+  }
 
   return {
     refs: (payload.value ?? []).map((message) => ({
