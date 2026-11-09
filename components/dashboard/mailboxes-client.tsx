@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   Copy,
   FolderPlus,
+  ListPlus,
   Loader2,
   MailPlus,
   MoreHorizontal,
@@ -25,6 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -84,6 +86,8 @@ export function MailboxesClient({
   const [groupFilter, setGroupFilter] = useState<string>("ALL");
   const [selectedGroupId, setSelectedGroupId] = useState<string>("ALL");
   const [newGroupName, setNewGroupName] = useState("");
+  const [bulkRawText, setBulkRawText] = useState("");
+  const [isBulkPending, startBulkTransition] = useTransition();
   const [busyMailboxId, setBusyMailboxId] = useState<string | null>(null);
   const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
   const [editingMailboxId, setEditingMailboxId] = useState<string | null>(null);
@@ -161,6 +165,13 @@ export function MailboxesClient({
     () => mailboxes.find((mailbox) => mailbox.id === editingMailboxId) ?? null,
     [editingMailboxId, mailboxes],
   );
+
+  const validBulkLineCount = useMemo(() => {
+    return bulkRawText
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0 && l.includes("@")).length;
+  }, [bulkRawText]);
 
   function setMailboxSelection(mailboxId: string, shouldSelect: boolean) {
     setSelectedIds((current) => {
@@ -278,6 +289,59 @@ export function MailboxesClient({
       setSelectedGroupId("ALL");
       toast.success("Đã tạo mailbox. Bạn có thể mở Kết nối ở tab mới hoặc sao chép URL consent.");
       router.refresh();
+    });
+  }
+
+  async function importBulkMailboxes() {
+    if (!bulkRawText.trim()) {
+      toast.error("Vui lòng nhập danh sách mail.");
+      return;
+    }
+
+    if (selectedGroupId === "__new__" && !newGroupName.trim()) {
+      toast.error("Vui lòng nhập tên nhóm mới trước khi thêm danh sách.");
+      return;
+    }
+
+    startBulkTransition(async () => {
+      try {
+        const response = await fetch("/api/mailboxes/bulk", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            rawText: bulkRawText,
+            groupId: selectedGroupId === "ALL" || selectedGroupId === "__new__" ? undefined : selectedGroupId,
+            newGroupName: selectedGroupId === "__new__" ? newGroupName.trim() : undefined,
+          }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "Không thể nhập danh sách mailbox.");
+        }
+
+        if (data.importedCount > 0) {
+          toast.success(
+            `Đã nhập thành công ${data.importedCount} mailbox! (${data.activeCount} đã kích hoạt ACTIVE sẵn sàng đọc OTP)`,
+          );
+          setBulkRawText("");
+          if (selectedGroupId === "__new__") {
+            setNewGroupName("");
+            setSelectedGroupId("ALL");
+          }
+          router.refresh();
+        } else {
+          toast.error("Không có mailbox nào được nhập hợp lệ.");
+        }
+
+        if (data.errors && data.errors.length > 0) {
+          toast.warning(`Có ${data.errors.length} dòng lỗi:\n` + data.errors.slice(0, 3).join("\n"));
+        }
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Không thể nhập danh sách mailbox.");
+      }
     });
   }
 
@@ -653,6 +717,51 @@ export function MailboxesClient({
               >
                 {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MailPlus className="mr-2 h-4 w-4" />}
                 Thêm mailbox
+              </Button>
+            </div>
+          </div>
+
+          <div className="subpanel-surface space-y-2.5 rounded-[20px] p-3">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                  Hoặc nhập hàng loạt Hotmail / Outlook (OAuth2 Graph)
+                </span>
+                {validBulkLineCount > 0 ? (
+                  <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-medium text-primary">
+                    Đã nhận diện: {validBulkLineCount} mail
+                  </span>
+                ) : null}
+              </div>
+              <span className="text-[11px] text-muted-foreground/80">
+                Định dạng: <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">email|pass|token|id</code> hoặc <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">email|pass|token|id|mail khôi phục</code>
+              </span>
+            </div>
+
+            <Textarea
+              value={bulkRawText}
+              onChange={(e) => setBulkRawText(e.target.value)}
+              placeholder={"mail1@hotmail.com|pass1|token1|id1|recovery1@gmail.com\nmail2@hotmail.com|pass2|token2|id2\n(Mỗi dòng 1 tài khoản, tự động kích hoạt OAuth2 Graph không cần login Outlook)"}
+              rows={3}
+              className="min-h-[76px] rounded-xl bg-background/60 font-mono text-xs leading-relaxed"
+            />
+
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-xs text-muted-foreground">
+                Tài khoản có <span className="font-semibold text-foreground">token</span> và <span className="font-semibold text-foreground">id</span> sẽ được kích hoạt thẳng sang <span className="font-semibold text-emerald-500">ACTIVE</span> (sẵn sàng đọc OTP ngay lập tức).
+              </div>
+              <Button
+                type="button"
+                className="h-9 rounded-xl px-4 text-xs font-semibold"
+                onClick={() => void importBulkMailboxes()}
+                disabled={isBulkPending || validBulkLineCount === 0 || (selectedGroupId === "__new__" && !newGroupName.trim())}
+              >
+                {isBulkPending ? (
+                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <ListPlus className="mr-1.5 h-3.5 w-3.5" />
+                )}
+                Nhập hàng loạt {validBulkLineCount > 0 ? `(${validBulkLineCount} mail)` : ""}
               </Button>
             </div>
           </div>

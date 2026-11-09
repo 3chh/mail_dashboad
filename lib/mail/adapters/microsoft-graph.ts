@@ -137,16 +137,57 @@ async function refreshMicrosoftAccessToken(mailbox: Mailbox) {
     throw new Error("Thiếu refresh token Microsoft.");
   }
 
+  let customClientId: string | null = null;
+  if (mailbox.notes) {
+    try {
+      const parsedNotes = JSON.parse(mailbox.notes);
+      if (parsedNotes?.clientId) customClientId = String(parsedNotes.clientId).trim();
+    } catch {}
+  }
+  if (!customClientId && mailbox.externalUserId) {
+    customClientId = mailbox.externalUserId.trim();
+  }
+
+  const isCustomClient = Boolean(customClientId && customClientId !== process.env.MICROSOFT_CLIENT_ID);
+  const clientId = isCustomClient ? customClientId! : (process.env.MICROSOFT_CLIENT_ID ?? "");
+
   const params = new URLSearchParams({
-    client_id: process.env.MICROSOFT_CLIENT_ID ?? "",
-    client_secret: process.env.MICROSOFT_CLIENT_SECRET ?? "",
+    client_id: clientId,
     grant_type: "refresh_token",
     refresh_token: refreshToken,
-    redirect_uri: getMicrosoftCallbackUrl(),
-    scope: MICROSOFT_GRAPH_SCOPES.join(" "),
   });
 
-  const token = await exchangeMicrosoftToken(params);
+  if (!isCustomClient) {
+    if (process.env.MICROSOFT_CLIENT_SECRET) {
+      params.set("client_secret", process.env.MICROSOFT_CLIENT_SECRET);
+    }
+    params.set("redirect_uri", getMicrosoftCallbackUrl());
+    params.set("scope", MICROSOFT_GRAPH_SCOPES.join(" "));
+  }
+
+  const tokenUrl = isCustomClient
+    ? "https://login.microsoftonline.com/common/oauth2/v2.0/token"
+    : getTokenUrl();
+
+  const response = await fetch(tokenUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: params,
+  });
+
+  if (!response.ok) {
+    const detail = await readMicrosoftError(response);
+    throw new Error(`Trao đổi token Microsoft thất bại: ${detail}`);
+  }
+
+  const token = (await response.json()) as {
+    access_token?: string;
+    refresh_token?: string;
+    expires_in?: number;
+    scope?: string;
+  };
 
   await prisma.mailbox.update({
     where: {
