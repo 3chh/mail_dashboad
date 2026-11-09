@@ -12,6 +12,7 @@ import {
   Pencil,
   RefreshCw,
   Save,
+  ShieldCheck,
   Trash2,
   X,
 } from "lucide-react";
@@ -341,6 +342,24 @@ export function MailboxesClient({
         }
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Không thể nhập danh sách mailbox.");
+      }
+    });
+  }
+
+  async function reactivateAllMailboxes() {
+    startTransition(async () => {
+      try {
+        const response = await fetch("/api/mailboxes/reactivate-all", {
+          method: "POST",
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "Không thể khôi phục kết nối.");
+        }
+        toast.success(data.message || "Đã khôi phục tất cả mailbox về trạng thái ACTIVE!");
+        router.refresh();
+      } catch (err: any) {
+        toast.error(err.message || "Lỗi khôi phục kết nối.");
       }
     });
   }
@@ -925,6 +944,17 @@ export function MailboxesClient({
                   Đồng bộ
                 </Button>
               </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="h-9 w-full rounded-xl px-3 text-xs font-semibold gap-1.5 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10"
+                onClick={() => void reactivateAllMailboxes()}
+                disabled={isPending}
+              >
+                {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+                Khôi phục tất cả kết nối (ACTIVE lại)
+              </Button>
             </div>
           </div>
 

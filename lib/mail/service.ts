@@ -55,7 +55,8 @@ export async function listManagedMailboxes(adminUserId: string) {
 export async function listActiveMailboxIds(adminUserId: string) {
   const mailboxes = await prisma.mailbox.findMany({
     where: {
-      status: MailboxStatus.ACTIVE,
+      refreshTokenEncrypted: { not: null },
+      status: { not: MailboxStatus.PENDING_CONSENT },
       OR: [{ createdById: adminUserId }, { createdById: null }],
     },
     select: {
