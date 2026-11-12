@@ -150,6 +150,7 @@ export async function POST(request: Request) {
 
   let importedCount = 0;
   let activeCount = 0;
+  const importedEmails: string[] = [];
   const errors: string[] = [];
 
   for (let i = 0; i < lines.length; i++) {
@@ -244,6 +245,7 @@ export async function POST(request: Request) {
       });
 
       importedCount++;
+      importedEmails.push(email);
       if (initialStatus === MailboxStatus.ACTIVE) {
         activeCount++;
       }
@@ -257,6 +259,7 @@ export async function POST(request: Request) {
     total: lines.length,
     importedCount,
     activeCount,
+    importedEmails,
     errors,
   });
 }

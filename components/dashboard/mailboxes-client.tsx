@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
+  Check,
   Copy,
   FolderPlus,
   ListPlus,
@@ -88,6 +89,8 @@ export function MailboxesClient({
   const [selectedGroupId, setSelectedGroupId] = useState<string>("ALL");
   const [newGroupName, setNewGroupName] = useState("");
   const [bulkRawText, setBulkRawText] = useState("");
+  const [lastImportedEmails, setLastImportedEmails] = useState<string[]>([]);
+  const [copiedEmails, setCopiedEmails] = useState(false);
   const [isBulkPending, startBulkTransition] = useTransition();
   const [busyMailboxId, setBusyMailboxId] = useState<string | null>(null);
   const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
@@ -327,6 +330,9 @@ export function MailboxesClient({
           toast.success(
             `Đã nhập thành công ${data.importedCount} mailbox! (${data.activeCount} đã kích hoạt ACTIVE sẵn sàng đọc OTP)`,
           );
+          if (Array.isArray(data.importedEmails) && data.importedEmails.length > 0) {
+            setLastImportedEmails(data.importedEmails);
+          }
           setBulkRawText("");
           if (selectedGroupId === "__new__") {
             setNewGroupName("");
@@ -344,6 +350,35 @@ export function MailboxesClient({
         toast.error(error instanceof Error ? error.message : "Không thể nhập danh sách mailbox.");
       }
     });
+  }
+
+  function copyImportedEmails() {
+    if (lastImportedEmails.length === 0) return;
+    navigator.clipboard.writeText(lastImportedEmails.join("\n"));
+    setCopiedEmails(true);
+    toast.success(`Đã sao chép ${lastImportedEmails.length} địa chỉ mail vào clipboard!`);
+    setTimeout(() => setCopiedEmails(false), 2000);
+  }
+
+  function copyEmailsFromInput() {
+    const emails = bulkRawText
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0 && l.includes("@"))
+      .map((l) => {
+        const parts = (l.includes("|") ? l.split("|") : l.split("\t")).map((p) => p.trim());
+        const emailPart = parts.find((p) => p.includes("@") && !p.includes(" "));
+        return emailPart ? emailPart.toLowerCase() : "";
+      })
+      .filter(Boolean);
+
+    if (emails.length === 0) {
+      toast.error("Không tìm thấy địa chỉ email nào trong ô nhập.");
+      return;
+    }
+
+    navigator.clipboard.writeText(emails.join("\n"));
+    toast.success(`Đã sao chép ${emails.length} địa chỉ mail từ ô nhập!`);
   }
 
   async function reactivateAllMailboxes() {
@@ -747,9 +782,15 @@ export function MailboxesClient({
                   Hoặc nhập hàng loạt Hotmail / Outlook (OAuth2 Graph)
                 </span>
                 {validBulkLineCount > 0 ? (
-                  <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-medium text-primary">
-                    Đã nhận diện: {validBulkLineCount} mail
-                  </span>
+                  <button
+                    type="button"
+                    onClick={copyEmailsFromInput}
+                    title="Sao chép toàn bộ địa chỉ mail đã nhận diện từ ô nhập"
+                    className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-medium text-primary hover:bg-primary/25 transition-colors"
+                  >
+                    <Copy className="h-3 w-3" />
+                    Đã nhận diện: {validBulkLineCount} mail (sao chép)
+                  </button>
                 ) : null}
               </div>
               <span className="text-[11px] text-muted-foreground/80">
@@ -783,6 +824,58 @@ export function MailboxesClient({
                 Nhập hàng loạt {validBulkLineCount > 0 ? `(${validBulkLineCount} mail)` : ""}
               </Button>
             </div>
+
+            {lastImportedEmails.length > 0 ? (
+              <div className="mt-3 space-y-2.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3.5">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/20 text-xs font-bold text-emerald-400">
+                      ✓
+                    </span>
+                    <span className="text-xs font-semibold text-emerald-300">
+                      Danh sách {lastImportedEmails.length} email vừa thêm thành công:
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-8 rounded-xl bg-emerald-600 px-3 text-xs font-semibold text-white shadow-sm hover:bg-emerald-500"
+                      onClick={copyImportedEmails}
+                    >
+                      {copiedEmails ? (
+                        <Check className="mr-1.5 h-3.5 w-3.5" />
+                      ) : (
+                        <Copy className="mr-1.5 h-3.5 w-3.5" />
+                      )}
+                      {copiedEmails ? "Đã chép!" : `Sao chép ${lastImportedEmails.length} mail`}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 rounded-lg p-0 text-muted-foreground hover:bg-emerald-500/20 hover:text-foreground"
+                      onClick={() => setLastImportedEmails([])}
+                      title="Đóng danh sách"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <Textarea
+                  readOnly
+                  value={lastImportedEmails.join("\n")}
+                  rows={Math.min(Math.max(lastImportedEmails.length, 3), 7)}
+                  className="min-h-[68px] rounded-xl border-emerald-500/20 bg-background/90 font-mono text-xs leading-relaxed text-foreground select-all focus-visible:ring-emerald-500/30"
+                  onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+                />
+                <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                  <span>Mỗi dòng 1 email dạng thuần, thuận tiện dán trực tiếp vào file ghi chú.</span>
+                  <span className="text-[10px] text-emerald-400/90">Nhấp vào ô để bôi đen toàn bộ</span>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           {selectedGroupId === "__new__" ? (
